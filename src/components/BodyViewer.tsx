@@ -46,9 +46,6 @@ export interface BodyViewerProps {
   showViewToggle?: boolean;
 }
 
-const SORENESS_HINT =
-  'Tap a muscle to cycle its soreness: mild, sore, very sore, injured.';
-
 export function BodyViewer(props: BodyViewerProps) {
   const theme = useTheme();
   const { colors, type, settings } = theme;
@@ -382,13 +379,6 @@ export function BodyViewer(props: BodyViewerProps) {
           ))}
         </View>
       )}
-      {size && props.mode === 'soreness' && (
-        <View style={styles.hint} pointerEvents="none">
-          <Text style={[type.caption, { color: colors.muted }]}>
-            {SORENESS_HINT}
-          </Text>
-        </View>
-      )}
       {size && info && props.mode !== 'soreness' && (
         <View style={styles.infoWrap} pointerEvents="box-none">
           <View
@@ -441,12 +431,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
-  },
-  hint: {
-    position: 'absolute',
-    top: spacing.sm,
-    left: spacing.sm,
-    right: 110,
   },
   infoWrap: {
     position: 'absolute',

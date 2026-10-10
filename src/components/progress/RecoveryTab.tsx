@@ -164,7 +164,7 @@ export function RecoveryTab({
       )}
 
       <SectionTitle>Soreness map</SectionTitle>
-      <Muted>Tap a muscle to cycle its soreness level.</Muted>
+      <Muted>Tap a muscle to cycle its soreness: mild, sore, very sore, injured.</Muted>
       <BodyViewer
         height={320}
         mode="soreness"
