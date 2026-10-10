@@ -4,7 +4,7 @@
 
 // Emergency kill switch: set to false to disable all GL rendering (renders a
 // static placeholder instead). Used to recover from native GL crashes.
-export const BODY_3D_ENABLED = false;
+export const BODY_3D_ENABLED = true;
 
 import { Ionicons } from '@expo/vector-icons';
 import { GLView } from 'expo-gl';
@@ -56,6 +56,9 @@ export function BodyViewer(props: BodyViewerProps) {
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [view, setViewState] = useState<'front' | 'back'>('front');
+  // If GL setup throws (device-specific context issues), fall back to the
+  // placeholder instead of crashing the app.
+  const [glFailed, setGlFailed] = useState(false);
 
   const sceneRef = useRef<BodyScene | null>(null);
   const propsRef = useRef(props);
@@ -94,22 +97,27 @@ export function BodyViewer(props: BodyViewerProps) {
 
   const onContextCreate = useCallback(
     (gl: any) => {
-      if (!size) return;
+      if (!size || glFailed) return;
       const t = themeRef.current;
       const p = propsRef.current;
-      const scene = new BodyScene(gl, {
-        width: size.w,
-        height: size.h,
-        pixelRatio: PixelRatio.get(),
-        accentHex: t.accentHex,
-        finish: (t.settings.bodyFinish as BodyFinish) ?? 'standard',
-        autoRotate: p.autoRotate ?? true,
-        reduceMotion: t.settings.reduceMotion,
-      });
-      sceneRef.current = scene;
-      applyPaint(scene);
+      try {
+        const scene = new BodyScene(gl, {
+          width: size.w,
+          height: size.h,
+          pixelRatio: PixelRatio.get(),
+          accentHex: t.accentHex,
+          finish: (t.settings.bodyFinish as BodyFinish) ?? 'standard',
+          autoRotate: p.autoRotate ?? true,
+          reduceMotion: t.settings.reduceMotion,
+        });
+        sceneRef.current = scene;
+        applyPaint(scene);
+      } catch (e) {
+        console.warn('BodyViewer: 3D setup failed, using placeholder', e);
+        setGlFailed(true);
+      }
     },
-    [size, applyPaint]
+    [size, applyPaint, glFailed]
   );
 
   // Pause the render loop when the screen loses focus (tab switch etc.).
@@ -241,7 +249,7 @@ export function BodyViewer(props: BodyViewerProps) {
 
   const info = selected ? MUSCLE_INFO[selected] : null;
 
-  if (!BODY_3D_ENABLED) {
+  if (!BODY_3D_ENABLED || glFailed) {
     return (
       <View
         style={[
@@ -258,7 +266,7 @@ export function BodyViewer(props: BodyViewerProps) {
         ]}
       >
         <Text style={[type.caption, { color: colors.muted }]}>
-          3D body is temporarily disabled while we fix a crash.
+          3D body is temporarily unavailable on this device.
         </Text>
       </View>
     );
