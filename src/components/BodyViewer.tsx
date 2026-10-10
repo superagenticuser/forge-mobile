@@ -168,26 +168,38 @@ export function BodyViewer(props: BodyViewerProps) {
   ]);
 
   const setView = useCallback((v: 'front' | 'back') => {
-    setViewState(v);
-    sceneRef.current?.setView(v);
+    try {
+      setViewState(v);
+      sceneRef.current?.setView(v);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn('BodyViewer: setView failed', e);
+      setGlFailed(`setView: ${msg}`);
+    }
   }, []);
 
   const handleSelect = useCallback((x: number, y: number) => {
-    const scene = sceneRef.current;
-    if (!scene) return;
-    const mid = scene.tap(x, y);
-    if (!mid) return;
-    const group = groupOf(mid);
-    const p = propsRef.current;
-    if (p.mode === 'soreness') {
-      p.onSorenessCycle?.(group);
-      return;
+    try {
+      const scene = sceneRef.current;
+      if (!scene) return;
+      const mid = scene.tap(x, y);
+      if (!mid) return;
+      const group = groupOf(mid);
+      const p = propsRef.current;
+      if (p.mode === 'soreness') {
+        p.onSorenessCycle?.(group);
+        return;
+      }
+      selectedRef.current = group;
+      setSelected(group);
+      // Like the web app, flip to the side the tapped muscle reads best on.
+      const backSide = BACK_MUSCLES.includes(mid);
+      setView(backSide ? 'back' : 'front');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn('BodyViewer: tap failed', e);
+      setGlFailed(`tap: ${msg}`);
     }
-    selectedRef.current = group;
-    setSelected(group);
-    // Like the web app, flip to the side the tapped muscle reads best on.
-    const backSide = BACK_MUSCLES.includes(mid);
-    setView(backSide ? 'back' : 'front');
   }, []);
 
   const tap = useMemo(
