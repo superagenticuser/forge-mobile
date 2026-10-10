@@ -100,6 +100,13 @@ export function BodyViewer(props: BodyViewerProps) {
   const onContextCreate = useCallback(
     (gl: any) => {
       if (!size || glFailed) return;
+      // Validate the GL context before creating the scene. An invalid
+      // context causes "Cannot read property 'precision' of undefined"
+      // during renderer initialization.
+      if (!gl || typeof gl.getParameter !== 'function') {
+        console.warn('BodyViewer: invalid GL context, skipping scene creation');
+        return;
+      }
       const t = themeRef.current;
       const p = propsRef.current;
       try {
