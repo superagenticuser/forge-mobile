@@ -124,12 +124,13 @@ export function ExerciseDemo({ pattern }: { pattern: string }) {
   const pose = getPose(progress);
   if (!pose) return null;
 
-  // SVG viewport: map world coords (roughly -1 to 1) to SVG
+  // SVG viewport: fit the full pose range (X: -1.02..0.94, Y: -0.12..2.16)
+  // into the viewport with padding. World Y is up, SVG Y is down.
   const W = 200;
   const H = 200;
-  const scale = 80;
-  const cx = W / 2;
-  const cy = H / 2 + 20;
+  const scale = 79;
+  const cx = 103;
+  const cy = 180;
 
   const toSvg = (j: Joint) => ({
     x: cx + j.x * scale,
@@ -150,7 +151,7 @@ export function ExerciseDemo({ pattern }: { pattern: string }) {
   const strokeWidth = 4;
 
   return (
-    <View>
+    <View style={styles.container}>
       <Svg width={W} height={H}>
         {/* Head */}
         <Circle cx={pHd.x} cy={pHd.y} r={8} fill={strokeColor} />
@@ -184,6 +185,9 @@ export function ExerciseDemo({ pattern }: { pattern: string }) {
 }
 
 const styles = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+  },
   controls: {
     flexDirection: 'row',
     alignItems: 'center',
