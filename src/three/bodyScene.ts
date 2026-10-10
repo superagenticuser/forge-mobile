@@ -734,8 +734,6 @@ export class BodyScene {
 
   /** Tap at view coords; returns the raw muscle mesh id or null. */
   tap(x: number, y: number): string | null {
-    // TEMP DIAGNOSTIC: bypass raycast to isolate crash
-    return null;
     const ndc = new THREE.Vector2(
       (x / this.width) * 2 - 1,
       -((y / this.height) * 2 - 1)

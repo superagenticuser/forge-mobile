@@ -19,6 +19,7 @@ import {
   type LayoutChangeEvent,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { runOnJS } from 'react-native-reanimated';
 
 import {
   BACK_MUSCLES,
@@ -212,7 +213,10 @@ export function BodyViewer(props: BodyViewerProps) {
       Gesture.Tap()
         .maxDuration(500)
         .maxDistance(10)
-        .onEnd((e) => handleSelect(e.x, e.y)),
+        .onEnd((e) => {
+          'worklet';
+          runOnJS(handleSelect)(e.x, e.y);
+        }),
     [handleSelect]
   );
   const longPress = useMemo(
@@ -220,10 +224,29 @@ export function BodyViewer(props: BodyViewerProps) {
       Gesture.LongPress()
         .minDuration(500)
         .maxDistance(10)
-        .onStart((e) => handleSelect(e.x, e.y)),
+        .onStart((e) => {
+          'worklet';
+          runOnJS(handleSelect)(e.x, e.y);
+        }),
     [handleSelect]
   );
   const panPrev = useRef<{ x: number; y: number } | null>(null);
+
+  const panStart = useCallback(() => {
+    panPrev.current = null;
+    sceneRef.current?.beginInteract();
+  }, []);
+  const panUpdate = useCallback((tx: number, ty: number) => {
+    const prev = panPrev.current;
+    panPrev.current = { x: tx, y: ty };
+    if (prev) {
+      sceneRef.current?.pan(tx - prev.x, ty - prev.y);
+    }
+  }, []);
+  const panEnd = useCallback(() => {
+    panPrev.current = null;
+    sceneRef.current?.endInteract();
+  }, []);
   const pan = useMemo(
     () =>
       Gesture.Pan()
@@ -231,35 +254,45 @@ export function BodyViewer(props: BodyViewerProps) {
         .maxPointers(1)
         .minDistance(10)
         .onStart(() => {
-          panPrev.current = null;
-          sceneRef.current?.beginInteract();
+          'worklet';
+          runOnJS(panStart)();
         })
         .onUpdate((e) => {
-          const prev = panPrev.current;
-          panPrev.current = { x: e.translationX, y: e.translationY };
-          if (prev) {
-            sceneRef.current?.pan(
-              e.translationX - prev.x,
-              e.translationY - prev.y
-            );
-          }
+          'worklet';
+          runOnJS(panUpdate)(e.translationX, e.translationY);
         })
         .onEnd(() => {
-          panPrev.current = null;
-          sceneRef.current?.endInteract();
+          'worklet';
+          runOnJS(panEnd)();
         }),
-    []
+    [panStart, panUpdate, panEnd]
   );
+  const pinchStart = useCallback(() => {
+    sceneRef.current?.beginInteract();
+    sceneRef.current?.pinchStart();
+  }, []);
+  const pinchUpdate = useCallback((scale: number) => {
+    sceneRef.current?.pinch(scale);
+  }, []);
+  const pinchEnd = useCallback(() => {
+    sceneRef.current?.endInteract();
+  }, []);
   const pinch = useMemo(
     () =>
       Gesture.Pinch()
         .onStart(() => {
-          sceneRef.current?.beginInteract();
-          sceneRef.current?.pinchStart();
+          'worklet';
+          runOnJS(pinchStart)();
         })
-        .onUpdate((e) => sceneRef.current?.pinch(e.scale))
-        .onEnd(() => sceneRef.current?.endInteract()),
-    []
+        .onUpdate((e) => {
+          'worklet';
+          runOnJS(pinchUpdate)(e.scale);
+        })
+        .onEnd(() => {
+          'worklet';
+          runOnJS(pinchEnd)();
+        }),
+    [pinchStart, pinchUpdate, pinchEnd]
   );
   const composed = useMemo(
     () => Gesture.Race(tap, longPress, Gesture.Simultaneous(pan, pinch)),
