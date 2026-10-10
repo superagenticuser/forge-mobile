@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EXERCISES } from '@/src/data/exercises';
 import { useTheme } from '@/src/storage/settings';
 import { DataSection } from '@/src/components/settings/DataSection';
+import { ConfirmDialog } from '@/src/components/ConfirmDialog';
 import { ACCENTS, radius, spacing } from '@/src/theme';
 
 const EQUIPMENT_NAMES: Record<string, string> = {
@@ -353,6 +354,7 @@ export default function SettingsScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { settings, updateSettings } = theme;
+  const [pendingFinish, setPendingFinish] = useState<'standard' | 'chrome' | 'xray' | 'matte' | null>(null);
 
   return (
     <ScrollView
@@ -493,10 +495,30 @@ export default function SettingsScreen() {
             { value: 'matte', label: 'Matte' },
           ]}
           value={settings.bodyFinish}
-          onChange={(v) => updateSettings({ bodyFinish: v })}
+          onChange={(v) => {
+            // Body finish changes require an app restart to apply safely.
+            // Live material switching corrupts the GL context on expo-gl.
+            if (v !== settings.bodyFinish) {
+              setPendingFinish(v as 'standard' | 'chrome' | 'xray' | 'matte');
+            }
+          }}
           last
         />
       </Section>
+      <ConfirmDialog
+        visible={pendingFinish !== null}
+        title="Restart required"
+        message="Changing the 3D body finish requires an app restart to apply safely. Force-close the app from recents and reopen it."
+        confirmLabel="Apply"
+        destructive={false}
+        onConfirm={() => {
+          if (pendingFinish) {
+            updateSettings({ bodyFinish: pendingFinish });
+          }
+          setPendingFinish(null);
+        }}
+        onCancel={() => setPendingFinish(null)}
+      />
 
       <Section
         title="Daily workout reminder"

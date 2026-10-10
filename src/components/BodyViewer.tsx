@@ -153,11 +153,9 @@ export function BodyViewer(props: BodyViewerProps) {
     sceneRef.current?.setAccent(colors.accent);
   }, [colors.accent]);
 
-  useEffect(() => {
-    sceneRef.current?.setFinish(
-      (settings.bodyFinish as BodyFinish) ?? 'standard'
-    );
-  }, [settings.bodyFinish]);
+  // Body finish is applied only on cold start via the BodyScene constructor.
+  // Live switching via setFinish corrupts the GL context on expo-gl, so
+  // finish changes require an app restart (see Settings).
 
   useEffect(() => {
     sceneRef.current?.setReduceMotion(settings.reduceMotion);
