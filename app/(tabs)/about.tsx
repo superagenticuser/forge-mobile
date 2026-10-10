@@ -5,65 +5,6 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '@/src/storage/settings';
 import { radius, spacing } from '@/src/theme';
 
-const ported = [
-  'Exercise library: 243 exercises with search, muscle, equipment, and level filters',
-  'Exercise detail: steps, form cues, common mistakes, and easier/harder variations',
-  'Programs: all 14 training programs with per-day exercise plans',
-  'Program detail: sets x reps per exercise, deep-linked to exercise detail',
-  'FORGE dark theme shared across every screen',
-  'Over-the-air updates enabled: new JS changes arrive in about a minute, no reinstall needed',
-];
-
-const notYet = [
-  'Interactive 3D body map',
-  'Workout player (logging sets, rest timer)',
-  'Progress charts and history',
-  'Camera form checks and progress photos',
-  'Voice commands',
-  'Achievement badges',
-];
-
-const roadmap = [
-  'v0.2: workout player with set logging and rest timer',
-  'v0.3: local progress storage and charts',
-  'v0.4: 3D body map (evaluate three.js on native vs. WebView)',
-  'Later: camera, voice, achievements, sync',
-];
-
-function Section({
-  icon,
-  iconColor,
-  title,
-  items,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  iconColor: string;
-  title: string;
-  items: string[];
-}) {
-  const theme = useTheme();
-  const { colors, type } = theme;
-  return (
-    <View
-      style={[
-        styles.card,
-        { backgroundColor: colors.surface, borderColor: colors.line },
-      ]}
-    >
-      <View style={styles.cardHeader}>
-        <Ionicons name={icon} size={20} color={iconColor} />
-        <Text style={type.subtitle}>{title}</Text>
-      </View>
-      {items.map((item) => (
-        <View key={item} style={styles.itemRow}>
-          <Text style={[styles.bullet, { color: colors.accent }]}>·</Text>
-          <Text style={[type.body, styles.itemText]}>{item}</Text>
-        </View>
-      ))}
-    </View>
-  );
-}
-
 export default function AboutScreen() {
   const theme = useTheme();
   const { colors, type } = theme;
@@ -79,7 +20,7 @@ export default function AboutScreen() {
         <Text
           style={[type.body, { color: colors.muted, marginTop: spacing.xs }]}
         >
-          React Native experiment v0.1
+          Train hard. Recover smart.
         </Text>
       </View>
 
@@ -108,31 +49,35 @@ export default function AboutScreen() {
           { backgroundColor: colors.surface, borderColor: colors.line },
         ]}
       >
+        <View style={styles.cardHeader}>
+          <Ionicons name="barbell" size={20} color={colors.accent} />
+          <Text style={type.subtitle}>Features</Text>
+        </View>
         <Text style={type.body}>
-          This is an experiment to rewrite FORGE as a native mobile app with
-          Expo and React Native. The web app (superagenticuser/gym-3d) remains
-          the production app while this experiment runs.
+          243 exercises across 17 muscle groups with an interactive 3D body map.
+          14 training programs with mesocycle planning. Workout logging with
+          rest timer, plate calculator, and form guidance. Progress tracking
+          with charts, PRs, and achievements. Recovery dashboard with soreness
+          mapping. Camera form checks and progress photos. Voice commands for
+          hands-free logging.
         </Text>
       </View>
 
-      <Section
-        icon="checkmark-circle"
-        iconColor={theme.colors.volt}
-        title="Ported in v0.1"
-        items={ported}
-      />
-      <Section
-        icon="time"
-        iconColor={colors.warn}
-        title="Not yet ported"
-        items={notYet}
-      />
-      <Section
-        icon="map"
-        iconColor={colors.accent}
-        title="Roadmap"
-        items={roadmap}
-      />
+      <View
+        style={[
+          styles.card,
+          { backgroundColor: colors.surface, borderColor: colors.line },
+        ]}
+      >
+        <View style={styles.cardHeader}>
+          <Ionicons name="shield-checkmark" size={20} color={colors.accent} />
+          <Text style={type.subtitle}>Your data</Text>
+        </View>
+        <Text style={type.body}>
+          All your data stays on your device. Use Settings to back up, restore,
+          or import from the web app.
+        </Text>
+      </View>
     </ScrollView>
   );
 }
@@ -148,9 +93,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  itemRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
-  bullet: { fontSize: 16, fontWeight: '800', lineHeight: 21 },
-  itemText: { flex: 1 },
   settingsRow: {
     flexDirection: 'row',
     alignItems: 'center',

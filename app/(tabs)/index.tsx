@@ -221,18 +221,6 @@ export default function HomeScreen() {
           </Pressable>
         </Link>
       ))}
-
-      <View
-        style={[
-          styles.note,
-          { backgroundColor: colors.surface, borderColor: colors.line },
-        ]}
-      >
-        <Ionicons name="flask" size={16} color={theme.colors.volt} />
-        <Text style={[styles.noteText, { color: colors.muted }]}>
-          React Native experiment v0.1. The web app remains the production app.
-        </Text>
-      </View>
     </ScrollView>
   );
 }
@@ -318,13 +306,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   linkText: { flex: 1, gap: 2 },
-  note: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    padding: spacing.md,
-  },
-  noteText: { ...typeBase.caption, flex: 1 },
 });
