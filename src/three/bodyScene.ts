@@ -167,16 +167,20 @@ export class BodyScene {
     this.camera.position.set(0, 2.05, this.camDist);
     this.camera.lookAt(0, 1.85, 0);
 
-    this.scene.add(new THREE.HemisphereLight(0xaab4d4, 0x0b0d12, 1.0));
-    const key = new THREE.DirectionalLight(0xffffff, 1.25);
+    this.scene.add(new THREE.HemisphereLight(0xaab4d4, 0x0b0d12, 1.4));
+    const key = new THREE.DirectionalLight(0xffffff, 1.6);
     key.position.set(3, 6, 4);
     this.scene.add(key);
-    const rim = new THREE.DirectionalLight(0x7c8cff, 0.85);
+    const rim = new THREE.DirectionalLight(0x7c8cff, 1.2);
     rim.position.set(-4, 3, -4);
     this.scene.add(rim);
-    const fill = new THREE.DirectionalLight(0xdde4ff, 0.35);
+    const fill = new THREE.DirectionalLight(0xdde4ff, 0.6);
     fill.position.set(0, 2, 6);
     this.scene.add(fill);
+    // Dedicated back light so the rear view isn't flat and dark.
+    const backLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    backLight.position.set(0, 5, -6);
+    this.scene.add(backLight);
 
     // soft blob shadow under feet
     const blob = new THREE.Mesh(
