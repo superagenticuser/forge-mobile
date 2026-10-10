@@ -761,10 +761,9 @@ export class BodyScene {
   /** Adjust camera distance so the body fills the view width nicely. */
   private fitCameraToView(): void {
     if (this.width <= 0 || this.height <= 0) return;
-    // Prioritize width fill. The body is tall/narrow; filling the width
-    // in a portrait container means slight head/feet crop. User can pinch
-    // to zoom out for the full body.
-    this.camDist = 3.2;
+    // Fixed distance for reliable framing. The container uses standard
+    // page padding (no negative margins) so tap coordinates map correctly.
+    this.camDist = 2.8;
     this.camera.position.set(0, 2.05, this.camDist);
     this.camera.lookAt(0, 1.85, 0);
   }
