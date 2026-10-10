@@ -187,7 +187,9 @@ export default function HomeScreen() {
             Tap a muscle to explore
           </Text>
         </View>
-        <BodyViewer height={380} />
+        <View style={styles.bodyFullWidth}>
+          <BodyViewer height={420} />
+        </View>
       </View>
 
       {links.map((link) => (
@@ -238,6 +240,9 @@ const styles = StyleSheet.create({
   startButtonText: { fontSize: 17, fontWeight: '800' },
   stats: { flexDirection: 'row', gap: spacing.md },
   bodySection: { gap: spacing.sm },
+  bodyFullWidth: {
+    marginHorizontal: -spacing.lg,
+  },
   bodyHeader: {
     flexDirection: 'row',
     alignItems: 'baseline',
