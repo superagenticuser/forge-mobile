@@ -125,6 +125,7 @@ export class BodyScene {
   private camDist: number;
   private pinchStartDist = 0;
   private lastAct = Date.now();
+  private lastTap: { x: number; y: number; ndcX: number; ndcY: number; hit: string | null } | null = null;
   private interacting = false;
 
   private raf = 0;
@@ -746,7 +747,18 @@ export class BodyScene {
     this.raycaster.setFromCamera(ndc, this.camera);
     const hit = this.raycaster.intersectObjects(this.muscleMeshes, false)[0];
     this.lastAct = Date.now();
+    this.lastTap = { x, y, ndcX: ndc.x, ndcY: ndc.y, hit: hit ? (hit.object.userData.muscle as string) : null };
     return hit ? (hit.object.userData.muscle as string) : null;
+  }
+
+  /** Debug info for diagnosing framing and tap issues. */
+  getDebugInfo(): { camDist: number; width: number; height: number; lastTap: { x: number; y: number; ndcX: number; ndcY: number; hit: string | null } | null } {
+    return {
+      camDist: this.camDist,
+      width: this.width,
+      height: this.height,
+      lastTap: this.lastTap,
+    };
   }
 
   resize(w: number, h: number): void {

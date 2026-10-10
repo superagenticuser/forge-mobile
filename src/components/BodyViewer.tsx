@@ -61,6 +61,9 @@ export function BodyViewer(props: BodyViewerProps) {
   // placeholder instead of crashing the app. The error is shown so it can
   // be reported and fixed.
   const [glFailed, setGlFailed] = useState<string | null>(null);
+  // Debug overlay for diagnosing 3D framing and tap issues.
+  const [debugInfo, setDebugInfo] = useState<string>('');
+  const [debugOn, setDebugOn] = useState(true);
 
   const sceneRef = useRef<BodyScene | null>(null);
   const propsRef = useRef(props);
@@ -184,6 +187,13 @@ export function BodyViewer(props: BodyViewerProps) {
       const scene = sceneRef.current;
       if (!scene) return;
       const mid = scene.tap(x, y);
+      // Update debug overlay with tap and camera info.
+      const dbg = scene.getDebugInfo();
+      const lt = dbg.lastTap;
+      setDebugInfo(
+        `size: ${dbg.width.toFixed(0)}x${dbg.height.toFixed(0)} | cam: ${dbg.camDist.toFixed(2)}\n` +
+        `tap: (${x.toFixed(0)}, ${y.toFixed(0)}) -> NDC (${lt?.ndcX.toFixed(2)}, ${lt?.ndcY.toFixed(2)}) -> ${lt?.hit ?? 'miss'}`
+      );
       if (!mid) return;
       const group = groupOf(mid);
       const p = propsRef.current;
@@ -346,6 +356,23 @@ export function BodyViewer(props: BodyViewerProps) {
       onLayout={onLayout}
     >
       {glSurface}
+      {debugOn && (
+        <View style={styles.debugOverlay} pointerEvents="none">
+          <Text style={styles.debugText}>
+            {debugInfo || `size: ${size?.w.toFixed(0) ?? '?'}x${size?.h.toFixed(0) ?? '?'} | tap a muscle`}
+          </Text>
+          <Text style={styles.debugText}>Tap overlay to hide</Text>
+        </View>
+      )}
+      {debugOn && (
+        <Pressable
+          style={styles.debugToggle}
+          onPress={() => setDebugOn(false)}
+          accessibilityLabel="Hide debug overlay"
+        >
+          <Text style={styles.debugText}>HIDE</Text>
+        </Pressable>
+      )}
       {size && (props.showViewToggle ?? true) && (
         <View style={styles.viewToggle} pointerEvents="box-none">
           {(['front', 'back'] as const).map((v) => (
@@ -419,6 +446,28 @@ export function BodyViewer(props: BodyViewerProps) {
 const styles = StyleSheet.create({
   root: { width: '100%', overflow: 'hidden', borderRadius: radius.lg },
   fill: { flex: 1 },
+  debugOverlay: {
+    position: 'absolute',
+    top: spacing.sm,
+    left: spacing.sm,
+    right: spacing.sm,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 8,
+    padding: spacing.xs,
+  },
+  debugText: {
+    color: '#0f0',
+    fontSize: 11,
+    fontFamily: 'monospace',
+  },
+  debugToggle: {
+    position: 'absolute',
+    bottom: spacing.sm,
+    right: spacing.sm,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 8,
+    padding: spacing.xs,
+  },
   viewToggle: {
     position: 'absolute',
     top: spacing.sm,
