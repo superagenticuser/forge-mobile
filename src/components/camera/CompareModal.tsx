@@ -139,44 +139,44 @@ export function CompareModal({
             </View>
           ) : (
             <GestureHandlerRootView style={styles.sliderWrap}>
-              <View
-                style={styles.slider}
-                onLayout={(e) => {
-                  setSliderW(e.nativeEvent.layout.width);
-                }}
-              >
-                <Image
-                  source={{ uri: b.src }}
-                  style={styles.sliderImg}
-                  resizeMode="cover"
-                />
-                <Animated.View style={[styles.sliderTop, topStyle]}>
-                  {sliderW > 0 && (
-                    <Image
-                      source={{ uri: a.src }}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: sliderW,
-                        height: '100%',
-                      }}
-                      resizeMode="cover"
-                    />
-                  )}
-                </Animated.View>
-                <GestureDetector gesture={pan}>
+              <GestureDetector gesture={pan}>
+                <View
+                  style={styles.slider}
+                  onLayout={(e) => {
+                    setSliderW(e.nativeEvent.layout.width);
+                  }}
+                >
+                  <Image
+                    source={{ uri: b.src }}
+                    style={styles.sliderImg}
+                    resizeMode="cover"
+                  />
+                  <Animated.View style={[styles.sliderTop, topStyle]}>
+                    {sliderW > 0 && (
+                      <Image
+                        source={{ uri: a.src }}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: sliderW,
+                          height: '100%',
+                        }}
+                        resizeMode="cover"
+                      />
+                    )}
+                  </Animated.View>
                   <Animated.View style={[styles.handle, handleStyle]}>
                     <View style={styles.grip} />
                   </Animated.View>
-                </GestureDetector>
-                <View style={styles.labelA}>
-                  <Text style={styles.labelText}>{a.date}</Text>
+                  <View style={styles.labelA}>
+                    <Text style={styles.labelText}>{a.date}</Text>
+                  </View>
+                  <View style={styles.labelB}>
+                    <Text style={styles.labelText}>{b.date}</Text>
+                  </View>
                 </View>
-                <View style={styles.labelB}>
-                  <Text style={styles.labelText}>{b.date}</Text>
-                </View>
-              </View>
+              </GestureDetector>
               <Text
                 style={[
                   type.caption,
