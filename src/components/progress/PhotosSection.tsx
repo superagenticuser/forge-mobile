@@ -204,10 +204,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    width: '100%',
+  },
   item: {
     width: '31%',
     aspectRatio: 3 / 4,
+    minHeight: 120,
     borderRadius: radius.md,
     overflow: 'hidden',
     backgroundColor: '#000',
