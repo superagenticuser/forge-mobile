@@ -1,14 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { EXERCISES } from '@/src/data/exercises';
+import { ConfirmDialog } from '@/src/components/ConfirmDialog';
+import WarmupSection from '@/src/components/WarmupSection';
 import { muscleLabel, prettify } from '@/src/format';
+import { useLibrary } from '@/src/storage/library';
 import { useTheme } from '@/src/storage/settings';
 import { radius, spacing } from '@/src/theme';
-import WarmupSection from '@/src/components/WarmupSection';
-
-const byId = new Map(EXERCISES.map((e) => [e.id, e]));
 
 function Badge({ label }: { label: string }) {
   const theme = useTheme();
@@ -43,24 +43,30 @@ function Section({
   );
 }
 
-function VariationLink({ id }: { id: string }) {
+function ExerciseCard({ id }: { id: string }) {
   const theme = useTheme();
   const { colors, type } = theme;
+  const { byId } = useLibrary();
   const target = byId.get(id);
   if (!target) return null;
   return (
     <Pressable
       style={[
-        styles.variationLink,
+        styles.exerciseCard,
         { backgroundColor: colors.surface, borderColor: colors.line },
       ]}
       onPress={() =>
         router.push({ pathname: '/exercise/[id]', params: { id } })
       }
     >
-      <Text style={[type.body, { color: colors.accent, fontWeight: '600' }]}>
-        {target.name}
-      </Text>
+      <View style={styles.exerciseCardText}>
+        <Text style={[type.body, { fontWeight: '600' }]} numberOfLines={1}>
+          {target.name}
+        </Text>
+        <Text style={[type.caption, { color: colors.muted }]}>
+          {prettify(target.equipment)} · {prettify(target.level)}
+        </Text>
+      </View>
       <Ionicons name="chevron-forward" size={16} color={colors.accent} />
     </Pressable>
   );
@@ -68,9 +74,43 @@ function VariationLink({ id }: { id: string }) {
 
 export default function ExerciseDetailScreen() {
   const theme = useTheme();
-  const { colors, type } = theme;
+  const { colors, type, settings } = theme;
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { byId, exercises, isFav, toggleFav, deleteCustom } = useLibrary();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
   const exercise = byId.get(id ?? '');
+
+  const similar = useMemo(() => {
+    if (!exercise) return [];
+    return exercises
+      .filter((x) => x.id !== exercise.id && x.primary === exercise.primary)
+      .slice(0, 4);
+  }, [exercises, exercise]);
+
+  const swaps = useMemo(() => {
+    if (!exercise) return [];
+    const myEq = settings.myEquipment ?? [];
+    const pool = exercises.filter(
+      (x) =>
+        x.id !== exercise.id &&
+        x.primary === exercise.primary &&
+        x.equipment !== exercise.equipment
+    );
+    const byEq = new Map<string, typeof pool>();
+    for (const x of pool) {
+      const list = byEq.get(x.equipment) ?? [];
+      list.push(x);
+      byEq.set(x.equipment, list);
+    }
+    return [...byEq.entries()]
+      .sort(([a], [b]) => Number(myEq.includes(b)) - Number(myEq.includes(a)))
+      .map(([eq, list]) => ({
+        equipment: eq,
+        yours: myEq.includes(eq),
+        items: list.slice(0, 4),
+      }));
+  }, [exercises, exercise, settings.myEquipment]);
 
   if (!exercise) {
     return (
@@ -89,8 +129,15 @@ export default function ExerciseDetailScreen() {
     );
   }
 
+  const fav = isFav(exercise.id);
   const easier = exercise.variations?.easier ?? [];
   const harder = exercise.variations?.harder ?? [];
+
+  const onDelete = async () => {
+    setConfirmDelete(false);
+    await deleteCustom(exercise.id);
+    router.back();
+  };
 
   return (
     <ScrollView
@@ -99,12 +146,32 @@ export default function ExerciseDetailScreen() {
     >
       <Stack.Screen options={{ title: exercise.name }} />
 
-      <Text style={type.title}>{exercise.name}</Text>
+      <View style={styles.titleRow}>
+        <Text style={[type.title, styles.title]}>{exercise.name}</Text>
+        <Pressable
+          onPress={() => toggleFav(exercise.id)}
+          hitSlop={12}
+          accessibilityLabel={
+            fav ? 'Remove from favorites' : 'Add to favorites'
+          }
+        >
+          <Ionicons
+            name={fav ? 'heart' : 'heart-outline'}
+            size={26}
+            color={fav ? colors.accent : colors.muted}
+          />
+        </Pressable>
+      </View>
 
       <View style={styles.badges}>
         <Badge label={prettify(exercise.equipment)} />
         <Badge label={prettify(exercise.level)} />
         <Badge label={prettify(exercise.pattern)} />
+        {exercise.custom === true && (
+          <View style={[styles.badge, { backgroundColor: colors.accent }]}>
+            <Text style={[type.chip, { color: colors.bg }]}>Custom</Text>
+          </View>
+        )}
       </View>
 
       <Section title="Muscles">
@@ -121,66 +188,81 @@ export default function ExerciseDetailScreen() {
         </Text>
       </Section>
 
+      <Section title="Estimated 1RM">
+        <Text style={[type.body, { color: colors.muted }]}>
+          Log a workout to see your estimated max, calculated with the Epley
+          formula from your best logged set.
+        </Text>
+      </Section>
+
       {exercise.equipment !== 'bodyweight' && (
         <Section title="Warm-up sets">
           <WarmupSection />
         </Section>
       )}
 
-      <Section title="Steps">
-        {exercise.steps.map((step, i) => (
-          <View key={i} style={styles.stepRow}>
+      {exercise.steps.length > 0 && (
+        <Section title="Steps">
+          {exercise.steps.map((step, i) => (
+            <View key={i} style={styles.stepRow}>
+              <View
+                style={[
+                  styles.stepNumber,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.line,
+                  },
+                ]}
+              >
+                <Text style={[styles.stepNumberText, { color: colors.accent }]}>
+                  {i + 1}
+                </Text>
+              </View>
+              <Text style={[type.body, styles.stepText]}>{step}</Text>
+            </View>
+          ))}
+        </Section>
+      )}
+
+      {exercise.cues.length > 0 && (
+        <Section title="Form cues">
+          {exercise.cues.map((cue, i) => (
+            <View key={i} style={styles.bulletRow}>
+              <Ionicons
+                name="checkmark-circle"
+                size={18}
+                color={theme.colors.volt}
+              />
+              <Text style={[type.body, styles.bulletText]}>{cue}</Text>
+            </View>
+          ))}
+        </Section>
+      )}
+
+      {exercise.mistakes.length > 0 && (
+        <Section title="Common mistakes">
+          {exercise.mistakes.map((item, i) => (
             <View
+              key={i}
               style={[
-                styles.stepNumber,
+                styles.mistakeCard,
                 {
                   backgroundColor: colors.surface,
                   borderColor: colors.line,
                 },
               ]}
             >
-              <Text style={[styles.stepNumberText, { color: colors.accent }]}>
-                {i + 1}
+              <View style={styles.bulletRow}>
+                <Ionicons name="alert-circle" size={18} color={colors.warn} />
+                <Text style={[type.body, styles.mistakeText]}>{item.m}</Text>
+              </View>
+              <Text style={[type.caption, styles.fixText]}>
+                Fix: {item.fix}
               </Text>
             </View>
-            <Text style={[type.body, styles.stepText]}>{step}</Text>
-          </View>
-        ))}
-      </Section>
-
-      <Section title="Form cues">
-        {exercise.cues.map((cue, i) => (
-          <View key={i} style={styles.bulletRow}>
-            <Ionicons
-              name="checkmark-circle"
-              size={18}
-              color={theme.colors.volt}
-            />
-            <Text style={[type.body, styles.bulletText]}>{cue}</Text>
-          </View>
-        ))}
-      </Section>
-
-      <Section title="Common mistakes">
-        {exercise.mistakes.map((item, i) => (
-          <View
-            key={i}
-            style={[
-              styles.mistakeCard,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.line,
-              },
-            ]}
-          >
-            <View style={styles.bulletRow}>
-              <Ionicons name="alert-circle" size={18} color={colors.warn} />
-              <Text style={[type.body, styles.mistakeText]}>{item.m}</Text>
-            </View>
-            <Text style={[type.caption, styles.fixText]}>Fix: {item.fix}</Text>
-          </View>
-        ))}
-      </Section>
+          ))}
+        </Section>
+      )}
 
       {(easier.length > 0 || harder.length > 0) && (
         <Section title="Variations">
@@ -196,7 +278,7 @@ export default function ExerciseDetailScreen() {
                 Easier
               </Text>
               {easier.map((vid) => (
-                <VariationLink key={vid} id={vid} />
+                <ExerciseCard key={vid} id={vid} />
               ))}
             </View>
           )}
@@ -212,12 +294,87 @@ export default function ExerciseDetailScreen() {
                 Harder
               </Text>
               {harder.map((vid) => (
-                <VariationLink key={vid} id={vid} />
+                <ExerciseCard key={vid} id={vid} />
               ))}
             </View>
           )}
         </Section>
       )}
+
+      {similar.length > 0 && (
+        <Section title="Similar exercises">
+          {similar.map((s) => (
+            <ExerciseCard key={s.id} id={s.id} />
+          ))}
+        </Section>
+      )}
+
+      <Section title="Equipment swaps">
+        {swaps.length > 0 ? (
+          swaps.map((g) => (
+            <View key={g.equipment} style={styles.swapGroup}>
+              <View style={styles.swapHeader}>
+                <Text style={[type.body, { fontWeight: '700' }]}>
+                  {prettify(g.equipment)}
+                </Text>
+                {g.yours && (
+                  <View
+                    style={[
+                      styles.yoursTag,
+                      { backgroundColor: colors.accent },
+                    ]}
+                  >
+                    <Text style={[styles.yoursText, { color: colors.bg }]}>
+                      yours
+                    </Text>
+                  </View>
+                )}
+              </View>
+              {g.items.map((s) => (
+                <ExerciseCard key={s.id} id={s.id} />
+              ))}
+            </View>
+          ))
+        ) : (
+          <Text style={[type.body, { color: colors.muted }]}>
+            No swaps needed, this one covers it.
+          </Text>
+        )}
+      </Section>
+
+      <Section title="Progression">
+        <Text style={[type.body, { color: colors.muted }]}>
+          Your 1RM-over-time chart will appear here once the Progress phase
+          ships.
+        </Text>
+      </Section>
+
+      <Section title="Exercise demo">
+        <Text style={[type.body, { color: colors.muted }]}>
+          Animated form demos arrive with the workout extras phase.
+        </Text>
+      </Section>
+
+      {exercise.custom === true && (
+        <Pressable
+          style={[styles.deleteButton, { borderColor: colors.ember }]}
+          onPress={() => setConfirmDelete(true)}
+        >
+          <Ionicons name="trash-outline" size={18} color={colors.ember} />
+          <Text style={[type.chip, { color: colors.ember }]}>
+            Delete custom exercise
+          </Text>
+        </Pressable>
+      )}
+
+      <ConfirmDialog
+        visible={confirmDelete}
+        title="Delete custom exercise"
+        message={`Delete "${exercise.name}"? This cannot be undone.`}
+        confirmLabel="Delete"
+        onConfirm={onDelete}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </ScrollView>
   );
 }
@@ -236,6 +393,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+  },
+  title: { flex: 1 },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   badge: {
     borderWidth: 1,
@@ -271,12 +434,37 @@ const styles = StyleSheet.create({
   fixText: { paddingLeft: 26 },
   variationGroup: { gap: spacing.xs },
   variationLabel: { fontWeight: '600' },
-  variationLink: {
+  exerciseCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderRadius: radius.md,
     borderWidth: 1,
     padding: spacing.md,
+    gap: spacing.sm,
+  },
+  exerciseCardText: { flex: 1, gap: 2 },
+  swapGroup: { gap: spacing.xs },
+  swapHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  yoursTag: {
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  yoursText: { fontSize: 10, fontWeight: '800' },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderRadius: radius.pill,
+    paddingVertical: spacing.md,
+    marginTop: spacing.sm,
   },
 });

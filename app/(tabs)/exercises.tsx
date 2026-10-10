@@ -1,25 +1,35 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   FlatList,
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
 } from 'react-native';
 
-import type { Exercise } from '@/src/data/exercises';
-import { EXERCISES, MUSCLE_GROUPS } from '@/src/data/exercises';
+import { CustomExerciseModal } from '@/src/components/CustomExerciseModal';
+import { MUSCLE_GROUPS } from '@/src/data/exercises';
 import { muscleLabel, prettify } from '@/src/format';
+import { useLibrary, type StoredExercise } from '@/src/storage/library';
 import { useTheme } from '@/src/storage/settings';
 import { radius, spacing } from '@/src/theme';
 
 const MUSCLES = Object.keys(MUSCLE_GROUPS);
-const EQUIPMENT = [...new Set(EXERCISES.map((e) => e.equipment))].sort();
-const LEVELS = [...new Set(EXERCISES.map((e) => e.level))].sort();
+const EQUIPMENT = [
+  'bodyweight',
+  'barbell',
+  'dumbbell',
+  'cable',
+  'machine',
+  'kettlebell',
+  'band',
+];
+const LEVELS = ['beginner', 'intermediate', 'advanced'];
 
 function Chip({
   label,
@@ -54,9 +64,11 @@ function openExercise(id: string) {
   router.push({ pathname: '/exercise/[id]', params: { id } });
 }
 
-function ExerciseRow({ item }: { item: Exercise }) {
+function ExerciseRow({ item }: { item: StoredExercise }) {
   const theme = useTheme();
   const { colors, type } = theme;
+  const { isFav, toggleFav } = useLibrary();
+  const fav = isFav(item.id);
   return (
     <Pressable
       style={[
@@ -66,14 +78,36 @@ function ExerciseRow({ item }: { item: Exercise }) {
       onPress={() => openExercise(item.id)}
     >
       <View style={styles.rowText}>
-        <Text style={type.subtitle} numberOfLines={1}>
-          {item.name}
-        </Text>
+        <View style={styles.rowTitle}>
+          <Text style={type.subtitle} numberOfLines={1}>
+            {item.name}
+          </Text>
+          {item.custom === true && (
+            <View
+              style={[styles.customBadge, { backgroundColor: colors.accent }]}
+            >
+              <Text style={[styles.customBadgeText, { color: colors.bg }]}>
+                Custom
+              </Text>
+            </View>
+          )}
+        </View>
         <Text style={[type.caption, { color: colors.muted }]}>
           {muscleLabel(item.primary)} · {prettify(item.equipment)} ·{' '}
           {prettify(item.level)}
         </Text>
       </View>
+      <Pressable
+        onPress={() => toggleFav(item.id)}
+        hitSlop={10}
+        accessibilityLabel={fav ? 'Remove from favorites' : 'Add to favorites'}
+      >
+        <Ionicons
+          name={fav ? 'heart' : 'heart-outline'}
+          size={22}
+          color={fav ? colors.accent : colors.muted}
+        />
+      </Pressable>
       <Ionicons name="chevron-forward" size={20} color={colors.muted} />
     </Pressable>
   );
@@ -81,28 +115,59 @@ function ExerciseRow({ item }: { item: Exercise }) {
 
 export default function ExercisesScreen() {
   const theme = useTheme();
-  const { colors, type } = theme;
+  const { colors, type, settings } = theme;
+  const { exercises, favs } = useLibrary();
   const [query, setQuery] = useState('');
   const [muscle, setMuscle] = useState<string | null>(null);
   const [equipment, setEquipment] = useState<string | null>(null);
   const [level, setLevel] = useState<string | null>(null);
+  const [favOnly, setFavOnly] = useState(false);
+  const [myEqOnly, setMyEqOnly] = useState(false);
+  const [customOpen, setCustomOpen] = useState(false);
+
+  const myEquipment = settings.myEquipment;
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return EXERCISES.filter(
+    return exercises.filter(
       (e) =>
         (!q || e.name.toLowerCase().includes(q)) &&
         (!muscle || e.primary === muscle) &&
         (!equipment || e.equipment === equipment) &&
-        (!level || e.level === level)
+        (!level || e.level === level) &&
+        (!favOnly || favs.includes(e.id)) &&
+        (!myEqOnly ||
+          e.equipment === 'bodyweight' ||
+          myEquipment.includes(e.equipment))
     );
-  }, [query, muscle, equipment, level]);
+  }, [
+    exercises,
+    query,
+    muscle,
+    equipment,
+    level,
+    favOnly,
+    favs,
+    myEqOnly,
+    myEquipment,
+  ]);
 
   const hasFilters =
     muscle !== null ||
     equipment !== null ||
     level !== null ||
-    query.trim() !== '';
+    query.trim() !== '' ||
+    favOnly ||
+    myEqOnly;
+
+  const clearAll = () => {
+    setQuery('');
+    setMuscle(null);
+    setEquipment(null);
+    setLevel(null);
+    setFavOnly(false);
+    setMyEqOnly(false);
+  };
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
@@ -141,6 +206,40 @@ export default function ExercisesScreen() {
                 </Pressable>
               )}
             </View>
+
+            <View style={styles.toolbar}>
+              <Chip
+                label={`Favorites (${favs.length})`}
+                active={favOnly}
+                onPress={() => setFavOnly((v) => !v)}
+              />
+              <View style={styles.myEqRow}>
+                <Text style={[type.caption, { color: colors.muted }]}>
+                  My equipment only
+                </Text>
+                <Switch
+                  value={myEqOnly}
+                  onValueChange={setMyEqOnly}
+                  trackColor={{ true: colors.accent, false: colors.line }}
+                  thumbColor={colors.ink}
+                />
+              </View>
+              <Pressable
+                style={[styles.addButton, { backgroundColor: colors.accent }]}
+                onPress={() => setCustomOpen(true)}
+                accessibilityLabel="Add custom exercise"
+              >
+                <Ionicons name="add" size={20} color={colors.bg} />
+              </Pressable>
+            </View>
+            {myEqOnly && myEquipment.length === 0 && (
+              <Text style={[type.caption, { color: colors.muted }]}>
+                You have not set your equipment yet.{' '}
+                <Link href="/settings" style={{ color: colors.accent }}>
+                  Set it in Settings
+                </Link>
+              </Text>
+            )}
 
             <Text
               style={[type.caption, styles.groupLabel, { color: colors.muted }]}
@@ -218,25 +317,26 @@ export default function ExercisesScreen() {
             </ScrollView>
 
             <Text style={[type.caption, { color: colors.muted }]}>
-              {filtered.length} of {EXERCISES.length} exercises
+              {filtered.length} of {exercises.length} exercises
             </Text>
           </View>
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={type.subtitle}>No exercises match</Text>
+            <Text style={type.subtitle}>
+              {favOnly && favs.length === 0
+                ? 'No favorites yet'
+                : 'No exercises match'}
+            </Text>
             <Text style={[type.caption, { color: colors.muted }]}>
-              Try a different search or clear the filters.
+              {favOnly && favs.length === 0
+                ? 'Tap the heart on any exercise to save it here.'
+                : 'Try a different search or clear the filters.'}
             </Text>
             {hasFilters && (
               <Pressable
                 style={[styles.clearButton, { backgroundColor: colors.accent }]}
-                onPress={() => {
-                  setQuery('');
-                  setMuscle(null);
-                  setEquipment(null);
-                  setLevel(null);
-                }}
+                onPress={clearAll}
               >
                 <Text style={[type.chip, { color: colors.bg }]}>
                   Clear all filters
@@ -245,6 +345,10 @@ export default function ExercisesScreen() {
             )}
           </View>
         }
+      />
+      <CustomExerciseModal
+        visible={customOpen}
+        onClose={() => setCustomOpen(false)}
       />
     </View>
   );
@@ -264,6 +368,26 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   searchInput: { flex: 1 },
+  toolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  myEqRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: spacing.xs,
+  },
+  addButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   groupLabel: { fontWeight: '600', marginTop: spacing.sm },
   chipRow: { flexDirection: 'row' },
   chip: {
@@ -282,6 +406,13 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   rowText: { flex: 1, gap: 2 },
+  rowTitle: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  customBadge: {
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  customBadgeText: { fontSize: 10, fontWeight: '800' },
   empty: { alignItems: 'center', gap: spacing.sm, paddingTop: spacing.xxl },
   clearButton: {
     marginTop: spacing.sm,

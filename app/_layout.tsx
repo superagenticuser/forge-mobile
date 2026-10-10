@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 
 import { SettingsProvider, useTheme } from '@/src/storage/settings';
+import { LibraryProvider } from '@/src/storage/library';
 import { radius, spacing } from '@/src/theme';
 
 SplashScreen.preventAutoHideAsync();
@@ -121,7 +122,9 @@ function RootLayoutInner() {
 export default function RootLayout() {
   return (
     <SettingsProvider>
-      <RootLayoutInner />
+      <LibraryProvider>
+        <RootLayoutInner />
+      </LibraryProvider>
     </SettingsProvider>
   );
 }
