@@ -761,9 +761,9 @@ export class BodyScene {
   /** Adjust camera distance so the body fills the view width nicely. */
   private fitCameraToView(): void {
     if (this.width <= 0 || this.height <= 0) return;
-    // Fixed distance for reliable framing. The container uses standard
-    // page padding (no negative margins) so tap coordinates map correctly.
-    this.camDist = 2.8;
+    // Full-bleed container on Home. Distance 3.8 frames the body to fill
+    // width without excessive cropping.
+    this.camDist = 3.8;
     this.camera.position.set(0, 2.05, this.camDist);
     this.camera.lookAt(0, 1.85, 0);
   }
