@@ -39,3 +39,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# one-time-token retry scripts (contain credentials, never commit)
+scripts/retry-publish-*.sh
