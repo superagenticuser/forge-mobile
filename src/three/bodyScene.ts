@@ -761,15 +761,10 @@ export class BodyScene {
   /** Adjust camera distance so the body fills the view width nicely. */
   private fitCameraToView(): void {
     if (this.width <= 0 || this.height <= 0) return;
-    const vFov = (this.camera.fov * Math.PI) / 180;
-    const aspect = this.width / this.height;
-    // Body approx: 3.5 tall, 1.7 wide. Fit height with margin, like the web app.
-    const bodyH = 3.5;
-    const distH = bodyH / 0.88 / (2 * Math.tan(vFov / 2));
-    const hFov = 2 * Math.atan(Math.tan(vFov / 2) * aspect);
-    const bodyW = 1.7;
-    const distW = bodyW / 0.88 / (2 * Math.tan(hFov / 2));
-    this.camDist = Math.max(distH, distW);
+    // Fixed distance calibrated for native containers. The adaptive
+    // calculation was unreliable; a fixed distance matches the web app's
+    // approach (which uses a constant 5.9).
+    this.camDist = 4.2;
     this.camera.position.set(0, 2.05, this.camDist);
     this.camera.lookAt(0, 1.85, 0);
   }
