@@ -271,7 +271,7 @@ Install everything with `npx expo install` (resolves SDK-compatible versions; ne
 | react-native-svg | via expo install (~15.12+) | Charts, demos, ported Lucide icons | none |
 | react-native-gesture-handler | via expo install (~2.28+) | Builder drag-reorder, 3D gestures, demo scrub | none |
 | react-native-view-shot | via expo install (~4.x) | Workout share card PNG capture | none |
-| @react-native-voice/voice | 3.2.4 | Voice commands + voice logging (STT) | RECORD_AUDIO; ships its own Expo config plugin (no custom plugin needed; verified 2026-10-09) |
+| @react-native-voice/voice | 3.2.4 | Voice commands + voice logging (STT) | RECORD_AUDIO; ships its own Expo config plugin (no custom plugin needed; verified 2026-10-09). NOTE: its android/build.gradle uses jcenter(), removed in Gradle 9; fixed via patch-package (`patches/@react-native-voice+voice+3.2.4.patch`, jcenter > mavenCentral), applied by the `postinstall` script. |
 | expo-notifications | ~57.0.22 | Optional: upgrade reminders to real notifications (section 7) | POST_NOTIFICATIONS; config plugin |
 
 **app.json additions:** `expo-camera` plugin (`cameraPermission`, `microphonePermission` strings), `@react-native-voice/voice` plugin (permission strings; ships with the package), `expo-notifications` plugin if included. No other plugins required.
