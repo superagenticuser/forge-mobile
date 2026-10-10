@@ -29,6 +29,7 @@ Run lint and typecheck before declaring any task done.
 - Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
 - Docs: https://docs.expo.dev/router/introduction.md
 - **Never pass a style array to a direct child of `<Link asChild>` (or any Slot).** expo-router's Slot cannot merge style arrays: dev throws, production silently drops the styles (2026-10-09: this broke the Home cards in v0.4). Always pass a single flattened object: `style={StyleSheet.flatten([styles.card, { backgroundColor: colors.surface }])}`.
+- **Every full-screen screen and modal must respect safe areas.** Never rely on fixed bottom padding (`paddingBottom: spacing.xxl` is not enough on devices with tall nav bars). Use `useSafeAreaInsets()` for ScrollView content (`paddingBottom: insets.bottom + spacing.lg`) or `SafeAreaView` for modals, with sticky footers for action buttons (2026-10-09: exercise detail, program detail, settings, and the custom-exercise modal were all clipped).
 
 ## Building with EAS
 

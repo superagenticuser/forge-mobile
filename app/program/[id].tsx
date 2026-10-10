@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EXERCISES } from '@/src/data/exercises';
 import { PROGRAMS } from '@/src/data/programs';
@@ -30,6 +31,7 @@ function MetaChip({ label }: { label: string }) {
 
 export default function ProgramDetailScreen() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const { colors, type } = theme;
   const { id } = useLocalSearchParams<{ id: string }>();
   const { startProgramDay } = useWorkout();
@@ -56,7 +58,10 @@ export default function ProgramDetailScreen() {
   return (
     <ScrollView
       style={[styles.root, { backgroundColor: colors.bg }]}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[
+        styles.content,
+        { paddingBottom: insets.bottom + spacing.lg },
+      ]}
     >
       <Stack.Screen options={{ title: program.name }} />
 
@@ -154,7 +159,7 @@ export default function ProgramDetailScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
+  content: { padding: spacing.lg, gap: spacing.lg },
   empty: {
     flex: 1,
     alignItems: 'center',

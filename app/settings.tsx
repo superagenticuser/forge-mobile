@@ -13,6 +13,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EXERCISES } from '@/src/data/exercises';
 import { useTheme } from '@/src/storage/settings';
@@ -349,12 +350,16 @@ function EquipmentChips() {
 
 export default function SettingsScreen() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const { settings, updateSettings } = theme;
 
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.colors.bg }}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[
+        styles.content,
+        { paddingBottom: insets.bottom + spacing.lg },
+      ]}
     >
       <Section
         title="Accent color"
@@ -526,7 +531,7 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
+  content: { padding: spacing.lg, gap: spacing.lg },
   section: { gap: spacing.sm },
   sectionTitle: {
     fontSize: 12,

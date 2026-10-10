@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/src/components/ConfirmDialog';
 import WarmupSection from '@/src/components/WarmupSection';
@@ -76,6 +77,7 @@ function ExerciseCard({ id }: { id: string }) {
 
 export default function ExerciseDetailScreen() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const { colors, type, settings } = theme;
   const { id } = useLocalSearchParams<{ id: string }>();
   const { byId, exercises, isFav, toggleFav, deleteCustom } = useLibrary();
@@ -147,7 +149,10 @@ export default function ExerciseDetailScreen() {
   return (
     <ScrollView
       style={[styles.root, { backgroundColor: colors.bg }]}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[
+        styles.content,
+        { paddingBottom: insets.bottom + spacing.lg },
+      ]}
     >
       <Stack.Screen options={{ title: exercise.name }} />
 
@@ -421,7 +426,7 @@ export default function ExerciseDetailScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
+  content: { padding: spacing.lg, gap: spacing.lg },
   empty: {
     flex: 1,
     alignItems: 'center',
