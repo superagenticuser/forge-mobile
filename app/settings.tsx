@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EXERCISES } from '@/src/data/exercises';
 import { useTheme } from '@/src/storage/settings';
+import { DataSection } from '@/src/components/settings/DataSection';
 import { ACCENTS, radius, spacing } from '@/src/theme';
 
 const EQUIPMENT_NAMES: Record<string, string> = {
@@ -523,13 +524,7 @@ export default function SettingsScreen() {
       </Section>
 
       <Section title="Data" note="Your data never leaves this device.">
-        {/*
-          TODO (v0.15): data portability lives here - export JSON, export CSV,
-          backup, restore, and reset. See AUDIT.md section 6.
-        */}
-        <Text style={[theme.type.caption, styles.dataPlaceholder]}>
-          Backup, restore, and export arrive in a later update.
-        </Text>
+        <DataSection />
       </Section>
     </ScrollView>
   );
@@ -627,5 +622,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  dataPlaceholder: { paddingVertical: spacing.md },
 });
