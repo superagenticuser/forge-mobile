@@ -175,7 +175,17 @@ export function RecordsTab({
                 <Text style={[type.body, { color: colors.ink, flex: 1 }]}>
                   {MUSCLE_GROUPS[groupOfMuscle(g)] || g}
                 </Text>
-                <Text style={[type.caption, { color: colors.muted }]}>
+                <Text
+                  style={[
+                    type.caption,
+                    {
+                      color: colors.muted,
+                      textAlign: 'right',
+                      flexShrink: 1,
+                      marginLeft: spacing.md,
+                    },
+                  ]}
+                >
                   {d
                     ? `Day ${fmtWeight(d.vol, units)} (${shortDateLabel(d.date)})`
                     : ''}
