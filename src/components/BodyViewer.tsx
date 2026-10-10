@@ -57,8 +57,9 @@ export function BodyViewer(props: BodyViewerProps) {
   const [selected, setSelected] = useState<string | null>(null);
   const [view, setViewState] = useState<'front' | 'back'>('front');
   // If GL setup throws (device-specific context issues), fall back to the
-  // placeholder instead of crashing the app.
-  const [glFailed, setGlFailed] = useState(false);
+  // placeholder instead of crashing the app. The error is shown so it can
+  // be reported and fixed.
+  const [glFailed, setGlFailed] = useState<string | null>(null);
 
   const sceneRef = useRef<BodyScene | null>(null);
   const propsRef = useRef(props);
@@ -113,8 +114,9 @@ export function BodyViewer(props: BodyViewerProps) {
         sceneRef.current = scene;
         applyPaint(scene);
       } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
         console.warn('BodyViewer: 3D setup failed, using placeholder', e);
-        setGlFailed(true);
+        setGlFailed(msg);
       }
     },
     [size, applyPaint, glFailed]
@@ -265,8 +267,9 @@ export function BodyViewer(props: BodyViewerProps) {
           },
         ]}
       >
-        <Text style={[type.caption, { color: colors.muted }]}>
-          3D body is temporarily unavailable on this device.
+        <Text style={[type.caption, { color: colors.muted, textAlign: 'center' }]}>
+          3D body failed to start on this device.{'\n\n'}
+          {glFailed}
         </Text>
       </View>
     );
