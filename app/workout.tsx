@@ -1,13 +1,16 @@
 // Active workout player, ported from the web app's workout view
 // (js/workout.js renderWorkout). Full-screen flow outside the tab bar.
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack } from 'expo-router';
 import { useKeepAwake } from 'expo-keep-awake';
+import * as Haptics from 'expo-haptics';
+import * as Speech from 'expo-speech';
 import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -16,18 +19,26 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/src/components/ConfirmDialog';
 import { ExercisePickerModal } from '@/src/components/ExercisePickerModal';
+import { PlateCalculatorModal } from '@/src/components/PlateCalculatorModal';
+import { SetTypeModal } from '@/src/components/SetTypeModal';
 import { warmupSets } from '@/src/components/WarmupSection';
 import {
   fmtDuration,
   fromKgToDisplay,
+  SET_TYPE_SHORT,
   toKgFromDisplay,
+  type SetType,
 } from '@/src/lib/training';
 import { useLibrary } from '@/src/storage/library';
 import { useTheme } from '@/src/storage/settings';
 import {
+  getTempo,
+  saveTempo,
+  supersetBadge,
   useWorkout,
   type SessionExercise,
   type SessionSet,
+  type Tempo,
 } from '@/src/storage/workout';
 import { radius, spacing } from '@/src/theme';
 
@@ -35,10 +46,14 @@ function SetRow({
   exKey,
   set,
   index,
+  isSub,
+  onTypePress,
 }: {
   exKey: string;
   set: SessionSet;
   index: number;
+  isSub?: boolean;
+  onTypePress: (setKey: string) => void;
 }) {
   const theme = useTheme();
   const { colors, type } = theme;
@@ -53,6 +68,8 @@ function SetRow({
       color: set.done ? colors.muted : colors.ink,
     },
   ];
+
+  const advanced = set.type !== 'std' && set.type !== 'warmup';
 
   return (
     <View style={styles.setRow}>
@@ -73,7 +90,7 @@ function SetRow({
           { color: set.warmup ? colors.accent : colors.muted },
         ]}
       >
-        {set.warmup ? 'W' : index + 1}
+        {isSub ? '↳' : set.warmup ? 'W' : index + 1}
       </Text>
       <TextInput
         style={[inputStyle, styles.weightInput]}
@@ -97,6 +114,35 @@ function SetRow({
         editable={!set.done}
         accessibilityLabel="Reps"
       />
+      {isSub ? (
+        <View style={[styles.typeBadge, { borderColor: colors.line }]}>
+          <Text style={[styles.typeBadgeText, { color: colors.muted }]}>
+            Drop
+          </Text>
+        </View>
+      ) : (
+        <Pressable
+          style={[
+            styles.typeBadge,
+            {
+              borderColor: advanced ? colors.accent : colors.line,
+              backgroundColor: advanced ? colors.accent : 'transparent',
+            },
+          ]}
+          onPress={() => onTypePress(set.key)}
+          hitSlop={4}
+          accessibilityLabel={`Set type: ${SET_TYPE_SHORT[set.type]}. Tap to change.`}
+        >
+          <Text
+            style={[
+              styles.typeBadgeText,
+              { color: advanced ? colors.bg : colors.muted },
+            ]}
+          >
+            {SET_TYPE_SHORT[set.type]}
+          </Text>
+        </Pressable>
+      )}
       <TextInput
         style={[inputStyle, styles.rpeInput]}
         value={set.rpe}
@@ -180,30 +226,259 @@ function PlayerWarmup({
   );
 }
 
-function ExerciseCard({ exercise }: { exercise: SessionExercise }) {
+/** Expandable form guide: the exercise's steps (web: guide-toggle). */
+function FormGuidePanel({ exerciseId }: { exerciseId: string }) {
+  const theme = useTheme();
+  const { colors, type } = theme;
+  const { byId } = useLibrary();
+  const ex = byId.get(exerciseId);
+  if (!ex || !ex.steps.length) {
+    return (
+      <Text style={[type.caption, { color: colors.muted }]}>
+        No form guide for this exercise yet.
+      </Text>
+    );
+  }
+  return (
+    <View
+      style={[
+        styles.panel,
+        { backgroundColor: colors.bg, borderColor: colors.line },
+      ]}
+    >
+      <View style={styles.panelHeader}>
+        <Ionicons name="book-outline" size={16} color={colors.accent} />
+        <Text style={[type.chip, { color: colors.muted }]}>Form guide</Text>
+      </View>
+      {ex.steps.map((s, i) => (
+        <View key={i} style={styles.stepRow}>
+          <Text
+            style={[type.body, { color: colors.accent, fontWeight: '700' }]}
+          >
+            {i + 1}.
+          </Text>
+          <Text style={[type.body, { color: colors.ink, flex: 1 }]}>{s}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/** Tempo coach: paces each rep through eccentric / pause / concentric phases
+ * (web: tempo-toggle + startTempo). Tempo persists per exercise. */
+function TempoPanel({ exerciseId }: { exerciseId: string }) {
+  const theme = useTheme();
+  const { colors, type } = theme;
+  const voice = theme.settings.voiceCues;
+  const [tempo, setTempo] = useState<Tempo>([3, 1, 1]);
+  const [running, setRunning] = useState(false);
+  const [display, setDisplay] = useState('Ready');
+  const intRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const voiceRef = useRef(voice);
+  voiceRef.current = voice;
+
+  useEffect(() => {
+    let cancelled = false;
+    getTempo(exerciseId).then((t) => {
+      if (!cancelled) setTempo(t);
+    });
+    return () => {
+      cancelled = true;
+      if (intRef.current) clearInterval(intRef.current);
+    };
+  }, [exerciseId]);
+
+  const stop = () => {
+    if (intRef.current) {
+      clearInterval(intRef.current);
+      intRef.current = null;
+    }
+    setRunning(false);
+    setDisplay('Ready');
+  };
+
+  const start = async () => {
+    if (intRef.current) clearInterval(intRef.current);
+    const clean: Tempo = [
+      Math.max(1, Math.round(tempo[0])),
+      Math.max(0, Math.round(tempo[1])),
+      Math.max(1, Math.round(tempo[2])),
+    ];
+    setTempo(clean);
+    await saveTempo(exerciseId, clean);
+    const phases = [
+      { label: 'Lower', secs: clean[0] },
+      { label: 'Hold', secs: clean[1] },
+      { label: 'Lift', secs: clean[2] },
+    ].filter((p) => p.secs > 0);
+    if (!phases.length) return;
+    setRunning(true);
+    let pi = 0;
+    let left = phases[0].secs;
+    let rep = 1;
+    const cuePhase = (label: string, r: number, first: boolean) => {
+      Haptics.selectionAsync().catch(() => {});
+      if (voiceRef.current) {
+        try {
+          Speech.speak(first ? `${label}, rep ${r}` : label);
+        } catch {
+          // Speech engine unavailable; haptics already fired.
+        }
+      }
+    };
+    setDisplay(`${phases[0].label} ${left} · rep ${rep}`);
+    cuePhase(phases[0].label, rep, true);
+    intRef.current = setInterval(() => {
+      left -= 1;
+      if (left <= 0) {
+        pi += 1;
+        if (pi >= phases.length) {
+          pi = 0;
+          rep += 1;
+        }
+        left = phases[pi].secs;
+        cuePhase(phases[pi].label, rep, pi === 0);
+      }
+      setDisplay(`${phases[pi].label} ${left} · rep ${rep}`);
+    }, 1000);
+  };
+
+  const setPart = (i: number, v: string) => {
+    const n = Math.max(0, parseInt(v) || 0);
+    setTempo((prev) => {
+      const next: Tempo = [prev[0], prev[1], prev[2]];
+      next[i] = n;
+      return next;
+    });
+  };
+
+  const labels = ['Eccentric', 'Pause', 'Concentric'];
+
+  return (
+    <View
+      style={[
+        styles.panel,
+        { backgroundColor: colors.bg, borderColor: colors.line },
+      ]}
+    >
+      <View style={styles.panelHeader}>
+        <Ionicons name="timer-outline" size={16} color={colors.accent} />
+        <Text style={[type.chip, { color: colors.muted }]}>
+          Tempo coach: pace each rep
+        </Text>
+      </View>
+      <View style={styles.tempoInputs}>
+        {labels.map((label, i) => (
+          <View key={label} style={styles.tempoField}>
+            <Text style={[type.caption, { color: colors.muted }]}>{label}</Text>
+            <TextInput
+              style={[
+                styles.tempoInput,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.line,
+                  color: colors.ink,
+                },
+              ]}
+              value={String(tempo[i])}
+              onChangeText={(v) => setPart(i, v)}
+              keyboardType="number-pad"
+              returnKeyType="done"
+              editable={!running}
+              accessibilityLabel={`${label} seconds`}
+            />
+          </View>
+        ))}
+      </View>
+      <View style={styles.tempoActions}>
+        {!running ? (
+          <Pressable
+            style={[styles.tempoButton, { backgroundColor: colors.accent }]}
+            onPress={start}
+          >
+            <Text style={[type.chip, { color: colors.bg }]}>Start</Text>
+          </Pressable>
+        ) : (
+          <Pressable
+            style={[styles.tempoButton, { borderColor: colors.line }]}
+            onPress={stop}
+          >
+            <Text style={[type.chip, { color: colors.ink }]}>Stop</Text>
+          </Pressable>
+        )}
+        <Text
+          style={[
+            type.subtitle,
+            { color: running ? colors.accent : colors.muted },
+          ]}
+        >
+          {display}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function ExerciseCard({
+  exercise,
+  index,
+}: {
+  exercise: SessionExercise;
+  index: number;
+}) {
   const theme = useTheme();
   const { colors, type } = theme;
   const { byId } = useLibrary();
   const units = theme.settings.units;
   const {
+    workout,
     toggleExerciseExpanded,
     removeExercise,
     moveExercise,
     swapExercise,
     setExerciseNote,
     addSet,
+    setSetType,
+    addDropSet,
+    toggleLink,
   } = useWorkout();
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [swapOpen, setSwapOpen] = useState(false);
+  const [typeFor, setTypeFor] = useState<string | null>(null);
+  const [showGuide, setShowGuide] = useState(false);
+  const [showTempo, setShowTempo] = useState(false);
+  const [platesOpen, setPlatesOpen] = useState(false);
 
   const ex = byId.get(exercise.exerciseId);
   const doneCount = exercise.sets.filter((s) => s.done).length;
+  const badge = workout
+    ? supersetBadge(index, workout.exercises, workout.linkedAfter)
+    : null;
+  const linked =
+    !!workout &&
+    (workout.linkedAfter.includes(exercise.key) ||
+      (index > 0 &&
+        workout.linkedAfter.includes(workout.exercises[index - 1].key)));
+  const isLast = !!workout && index >= workout.exercises.length - 1;
+  const firstWorking = exercise.sets.find((s) => !s.warmup);
+  const firstDisplay = firstWorking ? parseFloat(firstWorking.weight) || 0 : 0;
+  const topSets = exercise.sets.filter((s) => !s.parentKey);
+
+  const pickType = (setKey: string, t: SetType) => {
+    setSetType(exercise.key, setKey, t);
+    // A fresh drop set starts with one linked sub-row right away.
+    if (t === 'drop') addDropSet(exercise.key, setKey);
+    setTypeFor(null);
+  };
 
   return (
     <View
       style={[
         styles.card,
-        { backgroundColor: colors.surface, borderColor: colors.line },
+        {
+          backgroundColor: colors.surface,
+          borderColor: badge ? colors.accent : colors.line,
+        },
       ]}
     >
       <Pressable
@@ -211,16 +486,28 @@ function ExerciseCard({ exercise }: { exercise: SessionExercise }) {
         onPress={() => toggleExerciseExpanded(exercise.key)}
       >
         <View style={styles.cardTitle}>
-          <Text
-            style={[type.subtitle, { fontWeight: '700' }]}
-            numberOfLines={1}
-          >
-            {ex ? ex.name : exercise.exerciseId}
-          </Text>
+          <View style={styles.titleRow}>
+            <Text
+              style={[type.subtitle, { fontWeight: '700', flex: 1 }]}
+              numberOfLines={1}
+            >
+              {ex ? ex.name : exercise.exerciseId}
+            </Text>
+            {badge && (
+              <View
+                style={[styles.groupBadge, { backgroundColor: colors.accent }]}
+              >
+                <Text style={[styles.groupBadgeText, { color: colors.bg }]}>
+                  {badge}
+                </Text>
+              </View>
+            )}
+          </View>
           <Text style={[type.caption, { color: colors.muted }]}>
             {doneCount}/{exercise.sets.length} sets
             {exercise.targetReps ? ` · target ${exercise.targetReps}` : ''}
             {exercise.swapped ? ' · swapped' : ''}
+            {exercise.travelSwap ? ' · travel swap' : ''}
           </Text>
         </View>
         <Ionicons
@@ -274,6 +561,95 @@ function ExerciseCard({ exercise }: { exercise: SessionExercise }) {
             </Pressable>
           </View>
 
+          <View style={styles.cardActions}>
+            <Pressable
+              style={styles.actionButton}
+              onPress={() => setShowGuide((v) => !v)}
+              hitSlop={8}
+              accessibilityLabel="Form guide"
+            >
+              <Ionicons
+                name="book-outline"
+                size={18}
+                color={showGuide ? colors.accent : colors.muted}
+              />
+              <Text
+                style={[
+                  styles.actionLabel,
+                  { color: showGuide ? colors.accent : colors.muted },
+                ]}
+              >
+                Guide
+              </Text>
+            </Pressable>
+            <Pressable
+              style={styles.actionButton}
+              onPress={() => setShowTempo((v) => !v)}
+              hitSlop={8}
+              accessibilityLabel="Tempo coach"
+            >
+              <Ionicons
+                name="timer-outline"
+                size={18}
+                color={showTempo ? colors.accent : colors.muted}
+              />
+              <Text
+                style={[
+                  styles.actionLabel,
+                  { color: showTempo ? colors.accent : colors.muted },
+                ]}
+              >
+                Tempo
+              </Text>
+            </Pressable>
+            {ex?.equipment === 'barbell' && (
+              <Pressable
+                style={styles.actionButton}
+                onPress={() => setPlatesOpen(true)}
+                hitSlop={8}
+                accessibilityLabel="Plate calculator"
+              >
+                <Ionicons
+                  name="barbell-outline"
+                  size={18}
+                  color={colors.muted}
+                />
+                <Text style={[styles.actionLabel, { color: colors.muted }]}>
+                  Plates
+                </Text>
+              </Pressable>
+            )}
+            {!isLast && (
+              <Pressable
+                style={styles.actionButton}
+                onPress={() => toggleLink(exercise.key)}
+                hitSlop={8}
+                accessibilityLabel={
+                  linked
+                    ? 'Unlink from next exercise'
+                    : 'Link with next exercise'
+                }
+              >
+                <Ionicons
+                  name="link-outline"
+                  size={18}
+                  color={linked ? colors.accent : colors.muted}
+                />
+                <Text
+                  style={[
+                    styles.actionLabel,
+                    { color: linked ? colors.accent : colors.muted },
+                  ]}
+                >
+                  {linked ? 'Unlink' : 'Link next'}
+                </Text>
+              </Pressable>
+            )}
+          </View>
+
+          {showGuide && <FormGuidePanel exerciseId={exercise.exerciseId} />}
+          {showTempo && <TempoPanel exerciseId={exercise.exerciseId} />}
+
           <View style={styles.setHeader}>
             <View style={styles.doneCol} />
             <Text style={[styles.setNum, styles.headerText]}> </Text>
@@ -297,6 +673,15 @@ function ExerciseCard({ exercise }: { exercise: SessionExercise }) {
             </Text>
             <Text
               style={[
+                { width: 44, textAlign: 'center' },
+                styles.headerText,
+                { color: colors.muted },
+              ]}
+            >
+              TYPE
+            </Text>
+            <Text
+              style={[
                 styles.rpeInput,
                 styles.headerText,
                 { color: colors.muted },
@@ -307,9 +692,44 @@ function ExerciseCard({ exercise }: { exercise: SessionExercise }) {
             <View style={styles.delCol} />
           </View>
 
-          {exercise.sets.map((s, i) => (
-            <SetRow key={s.key} exKey={exercise.key} set={s} index={i} />
-          ))}
+          {topSets.map((s, i) => {
+            const drops = exercise.sets.filter((d) => d.parentKey === s.key);
+            return (
+              <View key={s.key}>
+                <SetRow
+                  exKey={exercise.key}
+                  set={s}
+                  index={i}
+                  onTypePress={setTypeFor}
+                />
+                {drops.map((d) => (
+                  <View key={d.key} style={styles.dropRow}>
+                    <SetRow
+                      exKey={exercise.key}
+                      set={d}
+                      index={-1}
+                      isSub
+                      onTypePress={setTypeFor}
+                    />
+                  </View>
+                ))}
+                {s.type === 'drop' && !s.done && (
+                  <Pressable
+                    style={styles.addDropButton}
+                    onPress={() => addDropSet(exercise.key, s.key)}
+                    hitSlop={8}
+                  >
+                    <Ionicons name="add" size={14} color={colors.accent} />
+                    <Text
+                      style={[styles.addDropLabel, { color: colors.accent }]}
+                    >
+                      Add drop
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+            );
+          })}
 
           <Pressable
             style={[
@@ -342,6 +762,17 @@ function ExerciseCard({ exercise }: { exercise: SessionExercise }) {
         </View>
       )}
 
+      <SetTypeModal
+        visible={typeFor !== null}
+        current={exercise.sets.find((s) => s.key === typeFor)?.type ?? 'std'}
+        onClose={() => setTypeFor(null)}
+        onPick={(t) => typeFor && pickType(typeFor, t)}
+      />
+      <PlateCalculatorModal
+        visible={platesOpen}
+        onClose={() => setPlatesOpen(false)}
+        initialTarget={firstDisplay}
+      />
       <ConfirmDialog
         visible={confirmRemove}
         title="Remove exercise"
@@ -370,7 +801,7 @@ function ExerciseCard({ exercise }: { exercise: SessionExercise }) {
 function RestBar() {
   const theme = useTheme();
   const { colors, type } = theme;
-  const { rest, skipRest, extendRest } = useWorkout();
+  const { rest, skipRest, extendRest, advanceRestCue } = useWorkout();
   if (!rest) return null;
   const progress = rest.total > 0 ? rest.left / rest.total : 0;
   return (
@@ -414,6 +845,16 @@ function RestBar() {
           ]}
         />
       </View>
+      {!!rest.cue && (
+        <Pressable onPress={advanceRestCue} accessibilityLabel="Next form cue">
+          <Text style={[type.caption, { color: colors.muted }]}>
+            <Text style={{ color: colors.accent, fontWeight: '700' }}>
+              Form cue:{' '}
+            </Text>
+            {rest.cue}
+          </Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -423,7 +864,13 @@ export default function WorkoutScreen() {
   const { colors, type } = theme;
   useKeepAwake();
 
-  const { workout, buildSummary, cancelWorkout, addExercise } = useWorkout();
+  const {
+    workout,
+    buildSummary,
+    cancelWorkout,
+    addExercise,
+    toggleTravelMode,
+  } = useWorkout();
   const [elapsed, setElapsed] = useState(0);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -512,8 +959,36 @@ export default function WorkoutScreen() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        {workout.exercises.map((e) => (
-          <ExerciseCard key={e.key} exercise={e} />
+        <View
+          style={[
+            styles.travelRow,
+            { backgroundColor: colors.surface, borderColor: colors.line },
+          ]}
+        >
+          <View style={styles.travelText}>
+            <Text style={type.subtitle}>Travel mode</Text>
+            <Text style={[type.caption, { color: colors.muted }]}>
+              Swap barbell and machine work for bodyweight, dumbbell, or band
+              alternatives.
+            </Text>
+          </View>
+          <Switch
+            value={workout.travelMode}
+            onValueChange={() => {
+              const n = toggleTravelMode();
+              if (n > 0) {
+                setNotice(
+                  `Travel mode on: ${n} exercise${n > 1 ? 's' : ''} swapped to travel-friendly alternatives.`
+                );
+              }
+            }}
+            trackColor={{ true: colors.accent }}
+            accessibilityLabel="Travel mode"
+          />
+        </View>
+
+        {workout.exercises.map((e, i) => (
+          <ExerciseCard key={e.key} exercise={e} index={i} />
         ))}
 
         <Pressable
@@ -532,8 +1007,8 @@ export default function WorkoutScreen() {
         <Text
           style={[type.caption, { color: colors.muted, textAlign: 'center' }]}
         >
-          Tip: tap the circle to log a set. Warm-up sets do not count toward
-          volume or PRs.
+          Tip: tap the circle to log a set, the type badge to change set type.
+          Warm-up sets do not count toward volume or PRs.
         </Text>
       </ScrollView>
 
@@ -602,6 +1077,69 @@ const styles = StyleSheet.create({
   delCol: { width: 26 },
   setNum: { width: 24, textAlign: 'center', fontSize: 12, fontWeight: '700' },
   setRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  dropRow: { paddingLeft: spacing.lg, opacity: 0.92 },
+  addDropButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.xs,
+    paddingLeft: spacing.lg,
+  },
+  addDropLabel: { fontSize: 13, fontWeight: '600' },
+  typeBadge: {
+    width: 44,
+    borderWidth: 1,
+    borderRadius: radius.sm,
+    paddingVertical: 6,
+    alignItems: 'center',
+  },
+  typeBadgeText: { fontSize: 11, fontWeight: '800' },
+  groupBadge: {
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+  },
+  groupBadgeText: { fontSize: 11, fontWeight: '800' },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  panel: {
+    borderWidth: 1,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  panelHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  stepRow: { flexDirection: 'row', gap: spacing.sm },
+  tempoInputs: { flexDirection: 'row', gap: spacing.md },
+  tempoField: { flex: 1, gap: 4 },
+  tempoInput: {
+    borderWidth: 1,
+    borderRadius: radius.sm,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  tempoActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  tempoButton: {
+    borderWidth: 1,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xs,
+  },
+  travelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+  },
+  travelText: { flex: 1, gap: 2 },
   cellInput: {
     borderWidth: 1,
     borderRadius: radius.sm,
@@ -612,7 +1150,7 @@ const styles = StyleSheet.create({
   },
   weightInput: { flex: 1 },
   repsInput: { flex: 1 },
-  rpeInput: { width: 48 },
+  rpeInput: { width: 40 },
   addSetButton: {
     flexDirection: 'row',
     alignItems: 'center',

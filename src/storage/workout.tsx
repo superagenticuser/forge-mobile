@@ -22,10 +22,13 @@ import {
   bestEpley1RM,
   fmtDuration,
   fmtLocalDate,
+  formCuesFor,
   parseTargetReps,
+  travelSub,
+  type SetType,
 } from '@/src/lib/training';
 
-import { getLogs, insertLog } from './db';
+import { getLogs, insertLog, kvGetJSON, kvSetJSON } from './db';
 import { useLibrary, type StoredExercise } from './library';
 import { useSettings, type Units } from './settings';
 
@@ -38,12 +41,15 @@ export interface LoggedSet {
   added: number;
   rpe: number | null;
   failed: boolean;
-  type: 'std';
+  type: SetType;
 }
 
 export interface LoggedExercise {
   id: string;
   sets: LoggedSet[];
+  /** Superset/giant-set group id shared by linked exercises (extension the
+   * web app ignores, kept for forward compatibility). */
+  group?: string;
 }
 
 /** Completed workout, matching the web app's woFinish entry shape. */
@@ -73,6 +79,9 @@ export interface SessionSet {
   rpe: string;
   done: boolean;
   warmup: boolean;
+  type: SetType;
+  /** Drop-set sub-rows link back to their parent set key. */
+  parentKey: string | null;
 }
 
 export interface SessionExercise {
@@ -84,6 +93,8 @@ export interface SessionExercise {
   note: string;
   expanded: boolean;
   swapped: boolean;
+  /** Swapped by travel mode (shown with a "Travel swap" tag). */
+  travelSwap: boolean;
 }
 
 export interface ActiveWorkout {
@@ -93,6 +104,9 @@ export interface ActiveWorkout {
   week: number | null;
   startedAt: number;
   exercises: SessionExercise[];
+  /** Exercise keys linked with the NEXT exercise (superset / giant set). */
+  linkedAfter: string[];
+  travelMode: boolean;
 }
 
 export interface WorkoutSeedExercise {
@@ -105,6 +119,8 @@ export interface RestState {
   left: number;
   total: number;
   label: string;
+  /** Currently displayed form cue, rotated every 15s (web: showRestCue). */
+  cue: string;
 }
 
 export interface NewPR {
@@ -150,6 +166,57 @@ export function restSecondsFor(
   if (!ex) return restShort;
   if (ex.equipment === 'barbell' || ex.level === 'advanced') return restLong;
   return restShort;
+}
+
+/** Superset / giant-set group bounds for the exercise at `index`.
+ * Ported from js/workout.js: linkedAfter holds exercise keys that are linked
+ * with the next exercise; consecutive links form one group. */
+export function supersetGroup(
+  index: number,
+  exercises: SessionExercise[],
+  linkedAfter: string[]
+): { start: number; end: number; size: number; pos: number } {
+  let start = index;
+  let end = index;
+  while (start > 0 && linkedAfter.includes(exercises[start - 1].key)) start--;
+  while (end < exercises.length - 1 && linkedAfter.includes(exercises[end].key))
+    end++;
+  return { start, end, size: end - start + 1, pos: index - start + 1 };
+}
+
+/** Badge text for a grouped exercise: A1/A2 for pairs, G1..Gn for giant
+ * sets, null when ungrouped. Ported from js/workout.js pairBadge. */
+export function supersetBadge(
+  index: number,
+  exercises: SessionExercise[],
+  linkedAfter: string[]
+): string | null {
+  const g = supersetGroup(index, exercises, linkedAfter);
+  if (g.size === 2) return g.pos === 1 ? 'A1' : 'A2';
+  if (g.size >= 3) return `G${g.pos}`;
+  return null;
+}
+
+// ---------- per-exercise tempo (web: getTempo/saveTempo, js/progress.js) ----------
+
+const TEMPO_KEY = 'forge-tempo';
+export type Tempo = [number, number, number];
+
+/** [eccentric, pause, concentric] seconds for an exercise. */
+export async function getTempo(exerciseId: string): Promise<Tempo> {
+  const all = await kvGetJSON<Record<string, Tempo>>(TEMPO_KEY);
+  const t = all?.[exerciseId];
+  if (Array.isArray(t) && t.length === 3) return [t[0], t[1], t[2]];
+  return [3, 1, 1];
+}
+
+export async function saveTempo(
+  exerciseId: string,
+  tempo: Tempo
+): Promise<void> {
+  const all = (await kvGetJSON<Record<string, Tempo>>(TEMPO_KEY)) ?? {};
+  all[exerciseId] = tempo;
+  await kvSetJSON(TEMPO_KEY, all);
 }
 
 function parseLog(data: string): WorkoutLog | null {
@@ -235,15 +302,26 @@ interface WorkoutContextValue {
     setKey: string,
     patch: Partial<Pick<SessionSet, 'weight' | 'reps' | 'rpe'>>
   ) => void;
+  /** Change a set's type (keeps the warmup flag in sync). */
+  setSetType: (exKey: string, setKey: string, type: SetType) => void;
+  /** Add a drop-set sub-row linked to a parent set. */
+  addDropSet: (exKey: string, parentKey: string) => void;
   toggleSetDone: (exKey: string, setKey: string) => void;
   deleteSet: (exKey: string, setKey: string) => void;
   addWarmupSets: (
     exKey: string,
     sets: Array<{ weight: number; reps: number }>
   ) => void;
+  /** Link/unlink an exercise with the next one (superset / giant set). */
+  toggleLink: (exKey: string) => void;
+  /** Turn travel mode on/off; enabling swaps eligible exercises now.
+   * Returns the number of exercises swapped. */
+  toggleTravelMode: () => number;
   startRest: (seconds: number, label: string) => void;
   skipRest: () => void;
   extendRest: (seconds: number) => void;
+  /** Advance the rotating form cue shown during rest. */
+  advanceRestCue: () => void;
   cancelWorkout: () => void;
   buildSummary: () => Promise<WorkoutSummary | null>;
   saveWorkout: (notes: string) => Promise<WorkoutSummary | null>;
@@ -271,6 +349,29 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
   // restRef mirrors `rest` so the 1s tick never runs side effects inside a
   // state updater (updaters must stay pure).
   const restRef = useRef<RestState | null>(null);
+  // Form-cue rotation during rest (web: showRestCue, 15s interval).
+  const cueIntRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const cueListRef = useRef<string[]>([]);
+  const cueIdxRef = useRef(0);
+
+  /** Cues for the first exercise with incomplete working sets, preferring
+   * the exercise's own cues, then the muscle-group set (web: showRestCue). */
+  const restCuesForCurrent = useCallback((): string[] => {
+    const w = workoutRef.current;
+    if (w) {
+      for (const e of w.exercises) {
+        const working = e.sets.filter((s) => !s.warmup);
+        const done = working.filter((s) => s.done).length;
+        if (done < working.length) {
+          const ex = byId.get(e.exerciseId);
+          if (ex?.cues?.length) return ex.cues;
+          if (ex) return formCuesFor(ex.primary);
+          break;
+        }
+      }
+    }
+    return formCuesFor('default');
+  }, [byId]);
 
   // Notification presentation: banner + optional sound, matching the
   // settings the user chose for the workout player.
@@ -289,6 +390,10 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
+    }
+    if (cueIntRef.current) {
+      clearInterval(cueIntRef.current);
+      cueIntRef.current = null;
     }
     const id = notifIdRef.current;
     notifIdRef.current = null;
@@ -320,9 +425,30 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     (seconds: number, label: string) => {
       const sec = Math.max(5, Math.round(seconds));
       clearRestTimer();
-      const state: RestState = { left: sec, total: sec, label };
+      const cues = restCuesForCurrent();
+      cueListRef.current = cues;
+      cueIdxRef.current = 0;
+      const state: RestState = {
+        left: sec,
+        total: sec,
+        label,
+        cue: cues[0] ?? '',
+      };
       restRef.current = state;
       setRest(state);
+      // Rotate the form cue every 15s, like the web app's showRestCue.
+      if (cues.length > 1) {
+        cueIntRef.current = setInterval(() => {
+          const list = cueListRef.current;
+          if (!list.length) return;
+          cueIdxRef.current = (cueIdxRef.current + 1) % list.length;
+          const prev = restRef.current;
+          if (!prev) return;
+          const next = { ...prev, cue: list[cueIdxRef.current] };
+          restRef.current = next;
+          setRest(next);
+        }, 15000);
+      }
       // Fire a local notification when the rest ends, so it works even if
       // the screen is off.
       Notifications.scheduleNotificationAsync({
@@ -348,7 +474,7 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
         setRest(next);
       }, 1000);
     },
-    [clearRestTimer, finishRest]
+    [clearRestTimer, finishRest, restCuesForCurrent]
   );
 
   const skipRest = useCallback(() => {
@@ -356,6 +482,18 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     restRef.current = null;
     setRest(null);
   }, [clearRestTimer]);
+
+  /** Manually advance the rotating rest cue (tap the cue text). */
+  const advanceRestCue = useCallback(() => {
+    const list = cueListRef.current;
+    if (!list.length) return;
+    cueIdxRef.current = (cueIdxRef.current + 1) % list.length;
+    const prev = restRef.current;
+    if (!prev) return;
+    const next = { ...prev, cue: list[cueIdxRef.current] };
+    restRef.current = next;
+    setRest(next);
+  }, []);
 
   const extendRest = useCallback((seconds: number) => {
     const prev = restRef.current;
@@ -430,6 +568,8 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
             rpe: '',
             done: false,
             warmup: false,
+            type: 'std',
+            parentKey: null,
           });
         }
         return {
@@ -441,6 +581,7 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
           note: '',
           expanded: i === 0,
           swapped: false,
+          travelSwap: false,
         };
       });
     },
@@ -464,6 +605,8 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
         week: null,
         startedAt: Date.now(),
         exercises: seedExercises(seeds, logs, units),
+        linkedAfter: [],
+        travelMode: false,
       });
       setLastSummary(null);
     },
@@ -495,6 +638,8 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
           logs,
           units
         ),
+        linkedAfter: [],
+        travelMode: false,
       });
       setLastSummary(null);
     },
@@ -514,10 +659,13 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
         rpe: '',
         done: false,
         warmup: false,
+        type: 'std',
+        parentKey: null,
       })),
       note: '',
       expanded: true,
       swapped: false,
+      travelSwap: false,
     };
     setWorkout((prev) =>
       prev
@@ -537,7 +685,11 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
   const removeExercise = useCallback((exKey: string) => {
     setWorkout((prev) =>
       prev
-        ? { ...prev, exercises: prev.exercises.filter((e) => e.key !== exKey) }
+        ? {
+            ...prev,
+            exercises: prev.exercises.filter((e) => e.key !== exKey),
+            linkedAfter: prev.linkedAfter.filter((k) => k !== exKey),
+          }
         : prev
     );
   }, []);
@@ -563,20 +715,30 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
         exercises: prev.exercises.map((e) => {
           if (e.key !== exKey) return e;
           // Keep the set count and targets; clear the numbers so the new
-          // exercise starts fresh.
-          return {
-            ...e,
-            exerciseId: newExerciseId,
-            swapped: true,
-            expanded: true,
-            sets: e.sets.map((s) => ({
+          // exercise starts fresh. Remap drop-set parent links to the new keys.
+          const keyMap = new Map<string, string>();
+          const sets = e.sets.map((s) => {
+            const nk = nextKey('set');
+            keyMap.set(s.key, nk);
+            return {
               ...s,
-              key: nextKey('set'),
+              key: nk,
               weight: '',
               reps: s.warmup ? s.reps : '',
               rpe: '',
               done: false,
-            })),
+            };
+          });
+          for (const s of sets) {
+            if (s.parentKey) s.parentKey = keyMap.get(s.parentKey) ?? null;
+          }
+          return {
+            ...e,
+            exerciseId: newExerciseId,
+            swapped: true,
+            travelSwap: false,
+            expanded: true,
+            sets,
           };
         }),
       };
@@ -627,6 +789,8 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
             rpe: '',
             done: false,
             warmup: false,
+            type: 'std',
+            parentKey: null,
           };
           return { ...e, sets: [...e.sets, template] };
         }),
@@ -661,6 +825,72 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  /** Change a set's type; the warmup flag follows the warmup type. */
+  const setSetType = useCallback(
+    (exKey: string, setKey: string, type: SetType) => {
+      setWorkout((prev) =>
+        prev
+          ? {
+              ...prev,
+              exercises: prev.exercises.map((e) =>
+                e.key === exKey
+                  ? {
+                      ...e,
+                      sets: e.sets.map((s) =>
+                        s.key === setKey
+                          ? { ...s, type, warmup: type === 'warmup' }
+                          : s
+                      ),
+                    }
+                  : e
+              ),
+            }
+          : prev
+      );
+    },
+    []
+  );
+
+  /** Add a drop-set sub-row under a top-level set. Each successive drop sheds
+   * roughly 20% of the parent weight. */
+  const addDropSet = useCallback((exKey: string, parentKey: string) => {
+    setWorkout((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        exercises: prev.exercises.map((e) => {
+          if (e.key !== exKey) return e;
+          const parent = e.sets.find((s) => s.key === parentKey);
+          if (!parent || parent.parentKey) return e;
+          const drops = e.sets.filter((s) => s.parentKey === parentKey).length;
+          const parentW = parseFloat(parent.weight) || 0;
+          const dropW =
+            Math.round(parentW * Math.pow(0.8, drops + 1) * 10) / 10;
+          const sub: SessionSet = {
+            key: nextKey('set'),
+            weight: dropW > 0 ? String(dropW) : '',
+            reps: parent.reps,
+            rpe: '',
+            done: false,
+            warmup: false,
+            type: 'drop',
+            parentKey,
+          };
+          const idx = e.sets.findIndex((s) => s.key === parentKey);
+          let insertAt = idx + 1;
+          while (
+            insertAt < e.sets.length &&
+            e.sets[insertAt].parentKey === parentKey
+          )
+            insertAt++;
+          const sets = [...e.sets];
+          sets.splice(insertAt, 0, sub);
+          return { ...e, sets };
+        }),
+      };
+    });
+  }, []);
+
   const toggleSetDone = useCallback(
     (exKey: string, setKey: string) => {
       const w = workoutRef.current;
@@ -694,11 +924,24 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
           );
         }
         // Auto-rest after a completed working set, like the web app.
+        // Linked groups (supersets / giant sets) get a short rest.
         if (s.autoRest && ex && !set?.warmup) {
           const exercise = byId.get(ex.exerciseId);
-          const secs = restSecondsFor(exercise, s.restShort, s.restLong);
+          const idx = w?.exercises.findIndex((e) => e.key === exKey) ?? -1;
+          const linked =
+            idx >= 0 &&
+            !!w &&
+            supersetGroup(idx, w.exercises, w.linkedAfter).size > 1;
+          const secs = linked
+            ? 30
+            : restSecondsFor(exercise, s.restShort, s.restLong);
           const name = exercise?.name ?? 'Next set';
-          startRest(secs, `${name}: rest ${fmtDuration(secs)}`);
+          startRest(
+            secs,
+            linked
+              ? `${name}: superset rest ${fmtDuration(secs)}`
+              : `${name}: rest ${fmtDuration(secs)}`
+          );
         }
       }
     },
@@ -712,7 +955,13 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
             ...prev,
             exercises: prev.exercises.map((e) =>
               e.key === exKey
-                ? { ...e, sets: e.sets.filter((x) => x.key !== setKey) }
+                ? {
+                    ...e,
+                    // Deleting a parent also removes its drop-set sub-rows.
+                    sets: e.sets.filter(
+                      (x) => x.key !== setKey && x.parentKey !== setKey
+                    ),
+                  }
                 : e
             ),
           }
@@ -740,6 +989,8 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
               rpe: '',
               done: false,
               warmup: true,
+              type: 'warmup',
+              parentKey: null,
             }));
             return { ...e, sets: [...warmups, ...e.sets] };
           }),
@@ -748,6 +999,58 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     },
     []
   );
+
+  /** Link/unlink an exercise with the next one (superset / giant set). */
+  const toggleLink = useCallback((exKey: string) => {
+    setWorkout((prev) => {
+      if (!prev) return prev;
+      const idx = prev.exercises.findIndex((e) => e.key === exKey);
+      if (idx < 0 || idx >= prev.exercises.length - 1) return prev;
+      const linkedAfter = prev.linkedAfter.includes(exKey)
+        ? prev.linkedAfter.filter((k) => k !== exKey)
+        : [...prev.linkedAfter, exKey];
+      return { ...prev, linkedAfter };
+    });
+  }, []);
+
+  /**
+   * Travel mode: swap barbell/machine exercises for bodyweight / dumbbell /
+   * band alternatives (web: travelSub, js/programs.js). Returns the number
+   * of exercises swapped. Turning it off leaves the session as-is.
+   */
+  const toggleTravelMode = useCallback((): number => {
+    const w = workoutRef.current;
+    if (!w) return 0;
+    if (w.travelMode) {
+      setWorkout((prev) => (prev ? { ...prev, travelMode: false } : prev));
+      return 0;
+    }
+    const all = [...byId.values()];
+    let swaps = 0;
+    const exercises = w.exercises.map((e) => {
+      if (e.travelSwap) return e;
+      const sub = travelSub(e.exerciseId, all);
+      if (!sub) return e;
+      swaps += 1;
+      return {
+        ...e,
+        exerciseId: sub.id,
+        travelSwap: true,
+        expanded: true,
+        sets: e.sets.map((s) => ({
+          ...s,
+          key: nextKey('set'),
+          parentKey: null,
+          weight: '',
+          reps: s.warmup ? s.reps : '',
+          rpe: '',
+          done: false,
+        })),
+      };
+    });
+    setWorkout({ ...w, travelMode: true, exercises });
+    return swaps;
+  }, [byId]);
 
   const cancelWorkout = useCallback(() => {
     clearRestTimer();
@@ -826,9 +1129,24 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
       if (!summary) return null;
 
       const exercises: LoggedExercise[] = [];
+      // Superset / giant-set group ids shared by linked exercises.
+      const groupOfKey = new Map<string, string>();
+      let groupN = 0;
+      w.exercises.forEach((e, i) => {
+        const g = supersetGroup(i, w.exercises, w.linkedAfter);
+        if (g.size > 1) {
+          const startKey = w.exercises[g.start].key;
+          if (!groupOfKey.has(startKey)) {
+            groupN += 1;
+            groupOfKey.set(startKey, `sg${groupN}`);
+          }
+          groupOfKey.set(e.key, groupOfKey.get(startKey)!);
+        }
+      });
       for (const e of w.exercises) {
         const doneWorking = e.sets.filter((s) => s.done && !s.warmup);
         if (!doneWorking.length) continue;
+        const group = groupOfKey.get(e.key);
         exercises.push({
           id: e.exerciseId,
           sets: doneWorking.map((s) => {
@@ -839,9 +1157,10 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
               added: 0,
               rpe: rpe != null ? Math.round(rpe) : null,
               failed: false,
-              type: 'std' as const,
+              type: s.type,
             };
           }),
+          ...(group ? { group } : {}),
         });
       }
 
@@ -889,12 +1208,17 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
       setExerciseNote,
       addSet,
       updateSet,
+      setSetType,
+      addDropSet,
       toggleSetDone,
       deleteSet,
       addWarmupSets,
+      toggleLink,
+      toggleTravelMode,
       startRest,
       skipRest,
       extendRest,
+      advanceRestCue,
       cancelWorkout,
       buildSummary,
       saveWorkout,
@@ -914,12 +1238,17 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
       setExerciseNote,
       addSet,
       updateSet,
+      setSetType,
+      addDropSet,
       toggleSetDone,
       deleteSet,
       addWarmupSets,
+      toggleLink,
+      toggleTravelMode,
       startRest,
       skipRest,
       extendRest,
+      advanceRestCue,
       cancelWorkout,
       buildSummary,
       saveWorkout,
