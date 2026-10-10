@@ -669,36 +669,50 @@ export class BodyScene {
   }
 
   setFinish(name: BodyFinish): void {
-    const f = FINISHES[name] || FINISHES.standard;
-    const apply = (m: THREE.MeshStandardMaterial | undefined | null) => {
-      if (!m) return;
-      const wasTransparent = m.transparent;
-      m.color.setHex(f.base);
-      m.roughness = f.roughness;
-      m.metalness = f.metalness;
-      m.opacity = f.opacity;
-      m.transparent = f.opacity < 1;
-      // Only force a shader recompile when transparency toggles; the other
-      // properties are uniforms. Forcing recompile on every finish change
-      // crashes expo-gl.
-      if (wasTransparent !== m.transparent) {
-        m.needsUpdate = true;
+    try {
+      const f = FINISHES[name] || FINISHES.standard;
+      const apply = (m: THREE.MeshStandardMaterial | undefined | null) => {
+        if (!m) return;
+        // Update uniforms only; avoid shader recompiles which crash expo-gl.
+        // For transparency toggles, we must recompile, but do it safely.
+        const wasTransparent = m.transparent;
+        m.color.setHex(f.base);
+        m.roughness = f.roughness;
+        m.metalness = f.metalness;
+        m.opacity = f.opacity;
+        m.transparent = f.opacity < 1;
+        if (wasTransparent !== m.transparent) {
+          // Defer the recompile to avoid mid-render corruption.
+          // If it fails, the material keeps the old transparency.
+          try {
+            m.needsUpdate = true;
+          } catch {
+            // Ignore recompile failures; keep rendering with old shader.
+          }
+        }
+      };
+      apply(this.baseMat);
+      if (this.neutralMat) {
+        const wasTransparent = this.neutralMat.transparent;
+        this.neutralMat.color.setHex(f.neutral);
+        this.neutralMat.roughness = f.roughness;
+        this.neutralMat.metalness = f.metalness;
+        this.neutralMat.opacity = f.opacity;
+        this.neutralMat.transparent = f.opacity < 1;
+        if (wasTransparent !== this.neutralMat.transparent) {
+          try {
+            this.neutralMat.needsUpdate = true;
+          } catch {
+            // Ignore.
+          }
+        }
       }
-    };
-    apply(this.baseMat);
-    if (this.neutralMat) {
-      const wasTransparent = this.neutralMat.transparent;
-      this.neutralMat.color.setHex(f.neutral);
-      this.neutralMat.roughness = f.roughness;
-      this.neutralMat.metalness = f.metalness;
-      this.neutralMat.opacity = f.opacity;
-      this.neutralMat.transparent = f.opacity < 1;
-      if (wasTransparent !== this.neutralMat.transparent) {
-        this.neutralMat.needsUpdate = true;
+      if (this.mats) {
+        for (const id in this.mats) apply(this.mats[id]);
       }
-    }
-    if (this.mats) {
-      for (const id in this.mats) apply(this.mats[id]);
+    } catch {
+      // Never let a finish change crash the 3D view. The finish will
+      // simply not apply, but the app keeps running.
     }
   }
 
