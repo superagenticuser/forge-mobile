@@ -1,0 +1,38 @@
+name: OTA Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        description: 'Update message (e.g. v0.11.42: fix description)'
+        required: true
+        type: string
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Publish OTA update
+        run: |
+          npx -y eas-cli@latest update \
+            --platform android \
+            --branch preview \
+            --environment preview \
+            --message "${{ inputs.message }}" \
+            --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EAS_SKIP_AUTO_FINGERPRINT: 1
+          CI: 1
