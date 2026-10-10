@@ -188,7 +188,7 @@ export default function HomeScreen() {
           </Text>
         </View>
         <View style={styles.bodyFullBleed}>
-          <BodyViewer height={400} />
+          <BodyViewer height={520} />
         </View>
       </View>
 
