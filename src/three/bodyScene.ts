@@ -672,21 +672,30 @@ export class BodyScene {
     const f = FINISHES[name] || FINISHES.standard;
     const apply = (m: THREE.MeshStandardMaterial | undefined | null) => {
       if (!m) return;
+      const wasTransparent = m.transparent;
       m.color.setHex(f.base);
       m.roughness = f.roughness;
       m.metalness = f.metalness;
       m.opacity = f.opacity;
       m.transparent = f.opacity < 1;
-      // Note: no needsUpdate needed, these are all uniforms. Forcing a
-      // shader recompile here crashes expo-gl on some devices.
+      // Only force a shader recompile when transparency toggles; the other
+      // properties are uniforms. Forcing recompile on every finish change
+      // crashes expo-gl.
+      if (wasTransparent !== m.transparent) {
+        m.needsUpdate = true;
+      }
     };
     apply(this.baseMat);
     if (this.neutralMat) {
+      const wasTransparent = this.neutralMat.transparent;
       this.neutralMat.color.setHex(f.neutral);
       this.neutralMat.roughness = f.roughness;
       this.neutralMat.metalness = f.metalness;
       this.neutralMat.opacity = f.opacity;
       this.neutralMat.transparent = f.opacity < 1;
+      if (wasTransparent !== this.neutralMat.transparent) {
+        this.neutralMat.needsUpdate = true;
+      }
     }
     if (this.mats) {
       for (const id in this.mats) apply(this.mats[id]);
