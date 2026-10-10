@@ -4,7 +4,14 @@ import * as SplashScreen from 'expo-splash-screen';
 import * as Updates from 'expo-updates';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  AppState,
+  Pressable,
+  StatusBar as RNStatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import { SettingsProvider, useTheme } from '@/src/storage/settings';
 import { radius, spacing } from '@/src/theme';
@@ -65,6 +72,8 @@ function RootLayoutInner() {
             {
               backgroundColor: theme.colors.surface,
               borderBottomColor: theme.colors.volt,
+              // Clear the Android status bar so the banner never sits under it.
+              paddingTop: (RNStatusBar.currentHeight ?? 0) + spacing.sm,
             },
           ]}
         >
