@@ -212,8 +212,7 @@ const styles = StyleSheet.create({
   },
   item: {
     width: '31%',
-    aspectRatio: 3 / 4,
-    minHeight: 120,
+    height: 160,
     borderRadius: radius.md,
     overflow: 'hidden',
     backgroundColor: '#000',
