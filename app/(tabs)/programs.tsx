@@ -118,8 +118,13 @@ function ProgramRow({ item }: { item: StoredProgram }) {
         destructive
         onCancel={() => setConfirmDelete(false)}
         onConfirm={async () => {
-          await deleteCustomProgram(item.id);
-          setConfirmDelete(false);
+          try {
+            await deleteCustomProgram(item.id);
+          } catch (e) {
+            console.warn('deleteCustomProgram failed', e);
+          } finally {
+            setConfirmDelete(false);
+          }
         }}
       />
     </View>

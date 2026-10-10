@@ -485,9 +485,14 @@ export default function ProgramDetailScreen() {
         destructive
         onCancel={() => setConfirmDelete(false)}
         onConfirm={async () => {
-          await deleteCustomProgram(program.id);
+          const id = program.id;
           setConfirmDelete(false);
           router.replace('/(tabs)/programs');
+          try {
+            await deleteCustomProgram(id);
+          } catch (e) {
+            console.warn('deleteCustomProgram failed', e);
+          }
         }}
       />
     </ScrollView>
