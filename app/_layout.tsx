@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { SettingsProvider, useTheme } from '@/src/storage/settings';
 import { LibraryProvider } from '@/src/storage/library';
@@ -128,15 +129,17 @@ function RootLayoutInner() {
 
 export default function RootLayout() {
   return (
-    <SafeAreaProvider>
-      <SettingsProvider>
-        <LibraryProvider>
-          <WorkoutProvider>
-            <RootLayoutInner />
-          </WorkoutProvider>
-        </LibraryProvider>
-      </SettingsProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <SettingsProvider>
+          <LibraryProvider>
+            <WorkoutProvider>
+              <RootLayoutInner />
+            </WorkoutProvider>
+          </LibraryProvider>
+        </SettingsProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 

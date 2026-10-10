@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { EXERCISES, MUSCLE_GROUPS } from '@/src/data/exercises';
 import { PROGRAMS } from '@/src/data/programs';
+import { BodyViewer } from '@/src/components/BodyViewer';
 import { useTheme } from '@/src/storage/settings';
 import { useWorkout } from '@/src/storage/workout';
 import { radius, spacing, type as typeBase } from '@/src/theme';
@@ -103,6 +104,16 @@ export default function HomeScreen() {
         ))}
       </View>
 
+      <View style={styles.bodySection}>
+        <View style={styles.bodyHeader}>
+          <Text style={type.subtitle}>3D Body</Text>
+          <Text style={[type.caption, { color: colors.muted }]}>
+            Tap a muscle to explore
+          </Text>
+        </View>
+        <BodyViewer height={380} />
+      </View>
+
       {links.map((link) => (
         <Link key={link.title} href={link.href} asChild>
           <Pressable
@@ -173,6 +184,12 @@ const styles = StyleSheet.create({
   },
   otaBadgeText: { fontSize: 12, fontWeight: '800' },
   stats: { flexDirection: 'row', gap: spacing.md },
+  bodySection: { gap: spacing.sm },
+  bodyHeader: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+  },
   statCard: {
     flex: 1,
     borderRadius: radius.lg,

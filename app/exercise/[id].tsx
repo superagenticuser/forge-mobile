@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/src/components/ConfirmDialog';
+import { BodyViewer } from '@/src/components/BodyViewer';
 import WarmupSection from '@/src/components/WarmupSection';
 import { muscleLabel, prettify } from '@/src/format';
 import { fmtWeight } from '@/src/lib/training';
@@ -196,6 +197,11 @@ export default function ExerciseDetailScreen() {
             </Text>
           )}
         </Text>
+        <BodyViewer
+          height={300}
+          highlightPrimary={[exercise.primary]}
+          highlightSecondary={exercise.secondary}
+        />
       </Section>
 
       <Section title="Estimated 1RM">

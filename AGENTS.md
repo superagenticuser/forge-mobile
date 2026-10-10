@@ -41,3 +41,20 @@ Docs: https://docs.expo.dev/eas/index.md
 - If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.json` and config plugins.
 - Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `npx expo run:ios|android` locally, or `eas build --profile development`.
 - Prefer recommended Expo modules over third-party libraries, and check your available skills before adding dependencies. Docs: https://docs.expo.dev/versions/latest/index.md
+
+## 3D body (expo-gl + three.js)
+
+- The mannequin is native: `src/three/bodyScene.ts` (pure three.js port of the
+  web `createBodyViewer`) driven by `src/components/BodyViewer.tsx`
+  (`GLView` + react-native-gesture-handler). The WebView fallback was not
+  needed.
+- three.js needs a fake canvas with the real expo-gl context:
+  `new THREE.WebGLRenderer({ canvas: fakeCanvas, context: gl })`, then
+  `gl.endFrameEXP()` after every `renderer.render()`. Set
+  `THREE.ColorManagement.enabled = false` and
+  `renderer.outputColorSpace = THREE.LinearSRGBColorSpace` to match the web
+  app's three r147 look.
+- GestureHandlerRootView wraps the root layout; without it gestures misbehave
+  on Android.
+- `theme.accent` is the accent id ('volt'); the hex is `colors.accent`.
+  The scene needs the hex.
