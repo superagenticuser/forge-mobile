@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/src/components/ConfirmDialog';
 import { BodyViewer } from '@/src/components/BodyViewer';
+import { ProgressionChart } from '@/src/components/ProgressionChart';
 import { PyramidModal } from '@/src/components/PyramidModal';
 import { CameraModal } from '@/src/components/camera/CameraModal';
 import { ClipLibraryModal } from '@/src/components/camera/ClipLibraryModal';
@@ -475,10 +476,7 @@ export default function ExerciseDetailScreen() {
       </Section>
 
       <Section title="Progression">
-        <Text style={[type.body, { color: colors.muted }]}>
-          Your 1RM-over-time chart will appear here once the Progress phase
-          ships.
-        </Text>
+        <ProgressionChart exerciseId={exercise.id} />
       </Section>
 
       <Section title="Exercise demo">
