@@ -141,6 +141,22 @@ export default function WorkoutSummaryScreen() {
           <StatCard value={String(lastSummary.totalSets)} label="Sets" />
         </View>
 
+        <View
+          style={[
+            styles.xpCard,
+            { backgroundColor: colors.surface, borderColor: colors.line },
+          ]}
+        >
+          <Ionicons name="flash" size={20} color={colors.accent} />
+          <Text style={[type.body, { color: colors.ink }]}>
+            Earn{' '}
+            <Text style={{ fontWeight: '800' }}>
+              +{lastSummary.xpEarned} XP
+            </Text>{' '}
+            on save
+          </Text>
+        </View>
+
         {lastSummary.prs.length > 0 && (
           <View
             style={[
@@ -245,6 +261,14 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   prHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  xpCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    padding: spacing.md,
+  },
   notesBlock: { gap: spacing.sm },
   notesInput: {
     borderWidth: 1,

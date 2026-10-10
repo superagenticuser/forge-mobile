@@ -19,8 +19,9 @@ import {
   totalSets,
   totalVolumeKg,
   workoutCountsByDate,
-  workoutStreak,
 } from '@/src/lib/progress';
+import { recoveryScore } from '@/src/lib/recovery';
+import { useGamification, xpLevel } from '@/src/lib/xp';
 import { LineChart } from '@/src/components/progress/LineChart';
 import {
   EmptyNote,
@@ -123,16 +124,23 @@ export function OverviewTab({
   const [selected, setSelected] = useState<number | null>(null);
 
   const units = settings.units === 'lb' ? 'lb' : 'kg';
+  const { xp, streak } = useGamification(logs);
   const stats = useMemo(() => {
     const vol = totalVolumeKg(logs);
     return [
       { value: String(logs.length), label: 'workouts logged' },
-      { value: String(workoutStreak(logs)), label: 'day streak' },
+      { value: String(streak), label: 'day streak' },
+      {
+        value: `${xp.freeze}`,
+        label: xp.freeze === 1 ? 'streak freeze' : 'streak freezes',
+      },
+      { value: `${recoveryScore(logs)}%`, label: 'recovery' },
+      { value: `Lv ${xpLevel(xp.xp)}`, label: `${xp.xp.toLocaleString()} XP` },
       { value: String(totalSets(logs)), label: 'total sets' },
       { value: fmtWeight(vol, units), label: 'total volume' },
       { value: fmtWeight(thisWeekVolumeKg(logs), units), label: 'this week' },
     ];
-  }, [logs, units]);
+  }, [logs, units, xp, streak]);
 
   const deload = useMemo(() => checkDeload(logs), [logs]);
   const plateaus = useMemo(() => detectPlateaus(logs, nameOf), [logs, nameOf]);

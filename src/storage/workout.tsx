@@ -31,6 +31,15 @@ import {
 import { getLogs, insertLog, kvGetJSON, kvSetJSON } from './db';
 import { useLibrary, type StoredExercise } from './library';
 import { useSettings, type Units } from './settings';
+import { fmtDateKey } from '@/src/lib/progress';
+import {
+  addXP,
+  getXP,
+  logXP,
+  saveXP,
+  streakWithFreezes,
+  workoutXPGain,
+} from '@/src/lib/xp';
 
 // ---------- persisted log shape (web-compatible) ----------
 
@@ -137,6 +146,8 @@ export interface WorkoutSummary {
   totalReps: number;
   prs: NewPR[];
   exerciseCount: number;
+  /** XP this workout earns (2/set, 50/PR, 25 streak bonus at 7+ days). */
+  xpEarned: number;
 }
 
 let keyCounter = 0;
@@ -1106,6 +1117,14 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
       1,
       Math.round((Date.now() - w.startedAt) / 60000)
     );
+    // XP preview: streak including today (peek only; freezes are consumed
+    // for real at save time). Matches the web app's woFinish XP math.
+    const xpData = await getXP();
+    const todayKey = fmtDateKey(new Date());
+    const withToday = logs.some((l) => l.date === todayKey)
+      ? logs
+      : [...logs, { date: todayKey, ts: Date.now() } as WorkoutLog];
+    const { streak: previewStreak } = streakWithFreezes(withToday, xpData);
     const summary: WorkoutSummary = {
       durationMin,
       volumeKg,
@@ -1115,6 +1134,7 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
       exerciseCount: w.exercises.filter((e) =>
         e.sets.some((s) => s.done && !s.warmup)
       ).length,
+      xpEarned: workoutXPGain(totalSets, prs.length, previewStreak),
     };
     setLastSummary(summary);
     return summary;
@@ -1183,6 +1203,24 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
         ts: log.ts,
         data: JSON.stringify(log),
       });
+
+      // Gamification: award XP like the web app (2/set, 50/PR, 25 streak
+      // bonus) and record it in the XP log for the monthly board.
+      const freshLogs = await loadWorkoutLogs();
+      const xp0 = await getXP();
+      const {
+        streak: finalStreak,
+        xp: xp1,
+        changed,
+      } = streakWithFreezes(freshLogs, xp0);
+      if (changed) await saveXP(xp1);
+      const gain = workoutXPGain(
+        summary.totalSets,
+        summary.prs.length,
+        finalStreak
+      );
+      await addXP(gain);
+      await logXP(log.date, gain);
 
       clearRestTimer();
       setWorkout(null);

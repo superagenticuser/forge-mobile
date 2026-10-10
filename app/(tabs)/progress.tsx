@@ -16,6 +16,8 @@ import {
   type BadgeDef,
 } from '@/src/lib/badges';
 import { OverviewTab } from '@/src/components/progress/OverviewTab';
+import { RecoveryTab } from '@/src/components/progress/RecoveryTab';
+import { BoardTab } from '@/src/components/progress/BoardTab';
 import { HistoryTab } from '@/src/components/progress/HistoryTab';
 import { RecordsTab } from '@/src/components/progress/RecordsTab';
 import { VolumeTab } from '@/src/components/progress/VolumeTab';
@@ -34,6 +36,7 @@ import { spacing } from '@/src/theme';
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
+  { id: 'recovery', label: 'Recovery' },
   { id: 'history', label: 'History' },
   { id: 'records', label: 'Records' },
   { id: 'volume', label: 'Volume' },
@@ -41,6 +44,7 @@ const TABS = [
   { id: 'body', label: 'Body' },
   { id: 'goals', label: 'Goals' },
   { id: 'badges', label: 'Badges' },
+  { id: 'board', label: 'Board' },
   { id: 'insights', label: 'Insights' },
   { id: 'standards', label: 'Standards' },
   { id: 'year', label: 'Year' },
@@ -98,6 +102,15 @@ export default function ProgressScreen() {
     },
     [byId]
   );
+  const getExDetail = useCallback(
+    (id: string) => {
+      const ex = byId.get(id);
+      return ex
+        ? { primary: ex.primary, secondary: ex.secondary ?? [] }
+        : undefined;
+    },
+    [byId]
+  );
   const resolveLiftId = useCallback(
     (lift: { id: string; name: string }) => {
       const direct = byId.get(lift.id);
@@ -145,6 +158,10 @@ export default function ProgressScreen() {
         return <CalendarTab logs={logs} nameOf={nameOf} />;
       case 'body':
         return <BodyTab />;
+      case 'recovery':
+        return <RecoveryTab logs={logs} getEx={getExDetail} />;
+      case 'board':
+        return <BoardTab logs={logs} />;
       case 'goals':
         return <GoalsTab logs={logs} nameOf={nameOf} />;
       case 'badges':
@@ -180,6 +197,7 @@ export default function ProgressScreen() {
     primaryOf,
     musclesOf,
     getExercise,
+    getExDetail,
     resolveLiftId,
   ]);
 

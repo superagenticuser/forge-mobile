@@ -659,10 +659,45 @@ export function rpeTrendWeeks(logs: WorkoutLog[]): RpeWeek[] {
 
 // ---------- v0.9: correlations ----------
 
-/** Data-driven correlations (web app's correlationInsights). Sleep
- * check-ins arrive in v0.11, so this is empty until then. */
-export function correlationInsights(_logs: WorkoutLog[]): string[] {
-  return [];
+/** Data-driven correlations (web app's correlationInsights, verbatim):
+ * sleep vs training volume from check-ins. Takes the check-in map so the
+ * function stays synchronous for useMemo callers. */
+export function correlationInsights(
+  logs: WorkoutLog[],
+  checkins: Record<string, { sleep?: number | null }> = {}
+): string[] {
+  const insights: string[] = [];
+  if (logs.length < 5) return insights;
+  const pairs: Array<{ sleep: number; vol: number }> = [];
+  logs.forEach((w) => {
+    const ci = checkins[w.date];
+    if (ci && ci.sleep != null) {
+      const vol = (w.exercises || []).reduce(
+        (a, x) =>
+          a +
+          (x.sets || []).reduce(
+            (b, s) => b + (s.weight || 0) * (s.reps || 0),
+            0
+          ),
+        0
+      );
+      pairs.push({ sleep: ci.sleep, vol });
+    }
+  });
+  if (pairs.length >= 5) {
+    const high = pairs.filter((p) => p.sleep >= 8);
+    const low = pairs.filter((p) => p.sleep < 7);
+    if (high.length >= 2 && low.length >= 2) {
+      const avgH = high.reduce((a, p) => a + p.vol, 0) / high.length;
+      const avgL = low.reduce((a, p) => a + p.vol, 0) / low.length;
+      if (avgH > avgL * 1.1) {
+        insights.push(
+          `You lift ${Math.round((avgH / avgL - 1) * 100)}% more volume on 8+ hour sleep nights.`
+        );
+      }
+    }
+  }
+  return insights;
 }
 
 // ---------- v0.9: year in review ----------

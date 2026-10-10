@@ -1,7 +1,6 @@
 // Progress > Insights: DOTS score, strength ratios, movement radar,
 // plateaus, correlations, total volume, RPE trend. Ports the web app's
-// insights tab (js/progress.js renderInsightsTab). XP is not ported yet
-// (v0.11), so the level card is omitted.
+// insights tab (js/progress.js renderInsightsTab).
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 import type { WorkoutLog } from '@/src/storage/workout';
 import { useTheme } from '@/src/storage/settings';
 import { bestEpley1RM, fmtWeight } from '@/src/lib/training';
+import { getXP, xpLevel, type XPData } from '@/src/lib/xp';
+import { loadCheckinMap, type CheckinData } from '@/src/lib/recovery';
 import {
   correlationInsights,
   detectPlateaus,
@@ -43,7 +44,16 @@ export function InsightsTab({
   const theme = useTheme();
   const { colors, type, settings } = theme;
   const [bwKg, setBwKg] = useState<number | null>(null);
+  const [xp, setXp] = useState<XPData | null>(null);
+  const [checkins, setCheckins] = useState<Record<string, CheckinData>>({});
   const units = settings.units === 'lb' ? 'lb' : 'kg';
+
+  useEffect(() => {
+    (async () => {
+      setXp(await getXP());
+      setCheckins(await loadCheckinMap());
+    })();
+  }, [logs]);
 
   useEffect(() => {
     (async () => {
@@ -90,7 +100,10 @@ export function InsightsTab({
     [logs, getExercise]
   );
   const plateaus = useMemo(() => detectPlateaus(logs, nameOf), [logs, nameOf]);
-  const corr = useMemo(() => correlationInsights(logs), [logs]);
+  const corr = useMemo(
+    () => correlationInsights(logs, checkins),
+    [logs, checkins]
+  );
   const rpeWeeks = useMemo(() => rpeTrendWeeks(logs), [logs]);
   const rpePoints = useMemo(
     () =>
@@ -122,6 +135,12 @@ export function InsightsTab({
       </Muted>
 
       <View style={styles.statGrid}>
+        {xp && (
+          <StatCard
+            value={String(xpLevel(xp.xp))}
+            label={`level (${xp.xp.toLocaleString()} XP)`}
+          />
+        )}
         {dots != null && <StatCard value={String(dots)} label="DOTS score" />}
         <StatCard
           value={bal.ratio ? bal.ratio.toFixed(2) : '-'}

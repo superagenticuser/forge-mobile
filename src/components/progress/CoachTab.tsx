@@ -3,7 +3,7 @@
 // (renderMeetTool): enter attempts per lift, get total and DOTS score.
 // Mesocycle/WOD tools live in later phases; the warm-up calculator is
 // already in the workout player.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import type { WorkoutLog } from '@/src/storage/workout';
@@ -14,21 +14,54 @@ import {
   correlationInsights,
   detectPlateaus,
   dotsFromTotal,
+  fmtDateKey,
   loadMeasures,
   muscleBalance,
   totalVolumeKg,
 } from '@/src/lib/progress';
+import {
+  getCheckin,
+  getSoreness,
+  loadCheckinMap,
+  recoveryLabel,
+  recoveryScore,
+  type CheckinData,
+} from '@/src/lib/recovery';
 import { EmptyNote, Muted, SectionTitle } from '@/src/components/progress/ui';
 import { radius, spacing } from '@/src/theme';
+
+interface RecoveryContext {
+  score: number;
+  checkin: CheckinData | null;
+  checkins: Record<string, CheckinData>;
+  soreCount: number;
+}
 
 function answerCoach(
   q: string,
   logs: WorkoutLog[],
   nameOf: (id: string) => string | null,
   primaryOf: (id: string) => string | null,
-  units: 'kg' | 'lb'
+  units: 'kg' | 'lb',
+  rec: RecoveryContext
 ): string {
   if (!logs.length) return 'I need more data. Log a few workouts first.';
+  if (/recover|readiness|sore/.test(q)) {
+    const bits = [
+      `Your recovery score is ${rec.score}% (${recoveryLabel(rec.score)}).`,
+    ];
+    if (rec.checkin?.sleep != null)
+      bits.push(`You slept ${rec.checkin.sleep}h last night.`);
+    if (rec.soreCount > 0)
+      bits.push(
+        `${rec.soreCount} muscle group${rec.soreCount === 1 ? ' is' : 's are'} sore today.`
+      );
+    if (rec.score < 40) bits.push('Take a rest day or do light mobility work.');
+    else if (rec.score < 60)
+      bits.push('Keep today moderate and prioritize sleep tonight.');
+    else bits.push('You are cleared to train hard.');
+    return bits.join(' ');
+  }
   if (/bench|stuck|plateau/.test(q)) {
     const plats = detectPlateaus(logs, nameOf);
     const bp = plats.find((p) => /bench|press/i.test(p.name));
@@ -36,10 +69,12 @@ function answerCoach(
       ? `Your ${bp.name} has stalled for ${bp.sessions} sessions. Try adding a back-off set, swapping to incline for 2 weeks, or checking your sleep.`
       : 'No bench plateau detected. Keep progressing!';
   }
-  if (/sleep|recover/.test(q)) {
-    const corr = correlationInsights(logs);
-    return corr.length
-      ? corr[0]
+  if (/sleep/.test(q)) {
+    const corr = correlationInsights(logs, rec.checkins);
+    if (corr.length) return corr[0];
+    const ci = rec.checkin;
+    return ci?.sleep != null
+      ? `You logged ${ci.sleep}h of sleep. Keep logging daily to unlock sleep-vs-performance correlations.`
       : 'Log sleep in daily check-ins to unlock recovery insights.';
   }
   if (/volume|how much/.test(q)) {
@@ -178,16 +213,42 @@ export function CoachTab({
   const { colors, type, settings } = theme;
   const [q, setQ] = useState('');
   const [answer, setAnswer] = useState<string | null>(null);
+  const [rec, setRec] = useState<RecoveryContext>({
+    score: 100,
+    checkin: null,
+    checkins: {},
+    soreCount: 0,
+  });
   const units = settings.units === 'lb' ? 'lb' : 'kg';
 
+  useEffect(() => {
+    (async () => {
+      const todayKey = fmtDateKey(new Date());
+      const [checkin, sore, checkins] = await Promise.all([
+        getCheckin(todayKey),
+        getSoreness(),
+        loadCheckinMap(),
+      ]);
+      setRec({
+        score: recoveryScore(logs),
+        checkin,
+        checkins,
+        soreCount: Object.keys(sore[todayKey] ?? {}).length,
+      });
+    })();
+  }, [logs]);
+
   const ask = () => {
-    setAnswer(answerCoach(q.toLowerCase(), logs, nameOf, primaryOf, units));
+    setAnswer(
+      answerCoach(q.toLowerCase(), logs, nameOf, primaryOf, units, rec)
+    );
   };
 
   const suggestions = useMemo(
     () => [
       'Why is my bench stuck?',
       'Do I need a deload?',
+      'How is my recovery?',
       'How much volume have I lifted?',
       'Is my training balanced?',
     ],
@@ -233,7 +294,14 @@ export function CoachTab({
             onPress={() => {
               setQ(s);
               setAnswer(
-                answerCoach(s.toLowerCase(), logs, nameOf, primaryOf, units)
+                answerCoach(
+                  s.toLowerCase(),
+                  logs,
+                  nameOf,
+                  primaryOf,
+                  units,
+                  rec
+                )
               );
             }}
             style={[
