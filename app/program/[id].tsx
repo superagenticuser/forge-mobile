@@ -5,31 +5,44 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { EXERCISES } from '@/src/data/exercises';
 import { PROGRAMS } from '@/src/data/programs';
 import { prettify } from '@/src/format';
-import { colors, radius, spacing, type } from '@/src/theme';
+import { useTheme } from '@/src/storage/settings';
+import { radius, spacing } from '@/src/theme';
 
 const byId = new Map(EXERCISES.map((e) => [e.id, e]));
 const programById = new Map(PROGRAMS.map((p) => [p.id, p]));
 
 function MetaChip({ label }: { label: string }) {
+  const theme = useTheme();
+  const { colors, type } = theme;
   return (
-    <View style={styles.chip}>
-      <Text style={styles.chipText}>{label}</Text>
+    <View
+      style={[
+        styles.chip,
+        { backgroundColor: colors.surface, borderColor: colors.line },
+      ]}
+    >
+      <Text style={[type.chip, { color: colors.muted }]}>{label}</Text>
     </View>
   );
 }
 
 export default function ProgramDetailScreen() {
+  const theme = useTheme();
+  const { colors, type } = theme;
   const { id } = useLocalSearchParams<{ id: string }>();
   const program = programById.get(id ?? '');
 
   if (!program) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: colors.bg }]}>
         <Stack.Screen options={{ title: 'Not found' }} />
         <View style={styles.empty}>
           <Text style={type.subtitle}>Program not found</Text>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backText}>Go back</Text>
+          <Pressable
+            style={[styles.backButton, { backgroundColor: colors.ember }]}
+            onPress={() => router.back()}
+          >
+            <Text style={[type.chip, { color: colors.bg }]}>Go back</Text>
           </Pressable>
         </View>
       </View>
@@ -37,11 +50,16 @@ export default function ProgramDetailScreen() {
   }
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={[styles.root, { backgroundColor: colors.bg }]}
+      contentContainerStyle={styles.content}
+    >
       <Stack.Screen options={{ title: program.name }} />
 
       <Text style={type.title}>{program.name}</Text>
-      <Text style={styles.tagline}>{program.tagline}</Text>
+      <Text style={[type.body, { color: colors.muted }]}>
+        {program.tagline}
+      </Text>
 
       <View style={styles.chips}>
         <MetaChip label={prettify(program.level)} />
@@ -52,13 +70,21 @@ export default function ProgramDetailScreen() {
 
       {program.days.map((day) => (
         <View key={day.name} style={styles.day}>
-          <Text style={styles.dayName}>{day.name}</Text>
+          <Text style={[type.subtitle, { color: colors.ember }]}>
+            {day.name}
+          </Text>
           {day.exercises.map((entry) => {
             const exercise = byId.get(entry.id);
             return (
               <Pressable
                 key={`${day.name}-${entry.id}`}
-                style={styles.exerciseRow}
+                style={[
+                  styles.exerciseRow,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.line,
+                  },
+                ]}
                 onPress={() =>
                   router.push({
                     pathname: '/exercise/[id]',
@@ -71,10 +97,12 @@ export default function ProgramDetailScreen() {
                     {exercise ? exercise.name : entry.id}
                   </Text>
                   {!exercise && (
-                    <Text style={type.caption}>Unknown exercise id</Text>
+                    <Text style={[type.caption, { color: colors.muted }]}>
+                      Unknown exercise id
+                    </Text>
                   )}
                 </View>
-                <Text style={styles.sets}>
+                <Text style={[styles.sets, { color: theme.colors.volt }]}>
                   {entry.sets} × {entry.reps}
                 </Text>
                 <Ionicons
@@ -92,7 +120,7 @@ export default function ProgramDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
+  root: { flex: 1 },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
   empty: {
     flex: 1,
@@ -101,35 +129,26 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   backButton: {
-    backgroundColor: colors.ember,
     borderRadius: radius.pill,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
   },
-  backText: { ...type.chip, color: colors.bg },
-  tagline: { ...type.body, color: colors.muted },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: {
-    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.line,
     borderRadius: radius.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
   },
-  chipText: { ...type.chip, color: colors.muted },
   day: { gap: spacing.sm },
-  dayName: { ...type.subtitle, color: colors.ember },
   exerciseRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.line,
     padding: spacing.md,
     gap: spacing.sm,
   },
   exerciseText: { flex: 1, gap: 2 },
-  sets: { fontSize: 13, fontWeight: '700', color: colors.volt },
+  sets: { fontSize: 13, fontWeight: '700' },
 });

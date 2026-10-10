@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Link } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, spacing, type } from '@/src/theme';
+import { useTheme } from '@/src/storage/settings';
+import { radius, spacing } from '@/src/theme';
 
 const ported = [
   'Exercise library: 243 exercises with search, muscle, equipment, and level filters',
@@ -16,7 +18,6 @@ const notYet = [
   'Interactive 3D body map',
   'Workout player (logging sets, rest timer)',
   'Progress charts and history',
-  'Local storage and sync',
   'Camera form checks and progress photos',
   'Voice commands',
   'Achievement badges',
@@ -40,16 +41,23 @@ function Section({
   title: string;
   items: string[];
 }) {
+  const theme = useTheme();
+  const { colors, type } = theme;
   return (
-    <View style={styles.card}>
+    <View
+      style={[
+        styles.card,
+        { backgroundColor: colors.surface, borderColor: colors.line },
+      ]}
+    >
       <View style={styles.cardHeader}>
         <Ionicons name={icon} size={20} color={iconColor} />
         <Text style={type.subtitle}>{title}</Text>
       </View>
       {items.map((item) => (
         <View key={item} style={styles.itemRow}>
-          <Text style={styles.bullet}>·</Text>
-          <Text style={styles.itemText}>{item}</Text>
+          <Text style={[styles.bullet, { color: colors.ember }]}>·</Text>
+          <Text style={[type.body, styles.itemText]}>{item}</Text>
         </View>
       ))}
     </View>
@@ -57,16 +65,48 @@ function Section({
 }
 
 export default function AboutScreen() {
+  const theme = useTheme();
+  const { colors, type } = theme;
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={[styles.root, { backgroundColor: colors.bg }]}
+      contentContainerStyle={styles.content}
+    >
       <View style={styles.hero}>
         <Text style={type.hero}>
-          FORGE<Text style={styles.dot}>.</Text>
+          FORGE<Text style={{ color: colors.ember }}>.</Text>
         </Text>
-        <Text style={styles.tagline}>React Native experiment v0.1</Text>
+        <Text
+          style={[type.body, { color: colors.muted, marginTop: spacing.xs }]}
+        >
+          React Native experiment v0.1
+        </Text>
       </View>
 
-      <View style={styles.card}>
+      <Link href="/settings" asChild>
+        <Pressable
+          style={[
+            styles.card,
+            styles.settingsRow,
+            { backgroundColor: colors.surface, borderColor: colors.line },
+          ]}
+        >
+          <Ionicons
+            name="settings-outline"
+            size={20}
+            color={theme.colors.volt}
+          />
+          <Text style={[type.subtitle, styles.settingsText]}>Settings</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+        </Pressable>
+      </Link>
+
+      <View
+        style={[
+          styles.card,
+          { backgroundColor: colors.surface, borderColor: colors.line },
+        ]}
+      >
         <Text style={type.body}>
           This is an experiment to rewrite FORGE as a native mobile app with
           Expo and React Native. The web app (superagenticuser/gym-3d) remains
@@ -76,7 +116,7 @@ export default function AboutScreen() {
 
       <Section
         icon="checkmark-circle"
-        iconColor={colors.volt}
+        iconColor={theme.colors.volt}
         title="Ported in v0.1"
         items={ported}
       />
@@ -97,26 +137,23 @@ export default function AboutScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
+  root: { flex: 1 },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
   hero: { paddingTop: spacing.lg },
-  dot: { color: colors.ember },
-  tagline: { ...type.body, color: colors.muted, marginTop: spacing.xs },
   card: {
-    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.line,
     padding: spacing.lg,
     gap: spacing.sm,
   },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   itemRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
-  bullet: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.ember,
-    lineHeight: 21,
+  bullet: { fontSize: 16, fontWeight: '800', lineHeight: 21 },
+  itemText: { flex: 1 },
+  settingsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
   },
-  itemText: { ...type.body, flex: 1 },
+  settingsText: { flex: 1 },
 });

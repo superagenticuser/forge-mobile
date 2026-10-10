@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { colors, radius, spacing, type } from '@/src/theme';
+import { useTheme } from '@/src/storage/settings';
+import { radius, spacing } from '@/src/theme';
 
 export interface WarmupSet {
   weight: number;
@@ -23,6 +24,8 @@ export function warmupSets(workingWeight: number): WarmupSet[] {
 }
 
 export default function WarmupSection() {
+  const theme = useTheme();
+  const { colors, type } = theme;
   const [weightText, setWeightText] = useState('');
   const [done, setDone] = useState<boolean[]>([]);
   const workingWeight = parseFloat(weightText) || 0;
@@ -44,7 +47,14 @@ export default function WarmupSection() {
     <View style={styles.root}>
       <View style={styles.inputRow}>
         <TextInput
-          style={styles.input}
+          style={[
+            styles.input,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.line,
+              color: colors.ink,
+            },
+          ]}
           value={weightText}
           onChangeText={setWeightText}
           placeholder="Working weight"
@@ -52,15 +62,15 @@ export default function WarmupSection() {
           keyboardType="numeric"
           returnKeyType="done"
         />
-        <Text style={styles.unit}>kg</Text>
+        <Text style={[type.body, { color: colors.muted }]}>kg</Text>
       </View>
       {sets.length === 0 ? (
-        <Text style={styles.hint}>
+        <Text style={[type.caption, { color: colors.muted }]}>
           Enter your working weight to generate warm-up sets.
         </Text>
       ) : (
         <View style={styles.sets}>
-          <Text style={styles.hint}>
+          <Text style={[type.caption, { color: colors.muted }]}>
             Warm-up for {workingWeight} kg. Tap each set when done.
           </Text>
           {sets.map((set, i) => {
@@ -68,15 +78,31 @@ export default function WarmupSection() {
             return (
               <Pressable
                 key={i}
-                style={[styles.setRow, isDone && styles.setRowDone]}
+                style={[
+                  styles.setRow,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.line,
+                  },
+                  isDone && {
+                    borderColor: theme.colors.volt,
+                    opacity: 0.75,
+                  },
+                ]}
                 onPress={() => toggleDone(i)}
               >
                 <Ionicons
                   name={isDone ? 'checkmark-circle' : 'ellipse-outline'}
                   size={22}
-                  color={isDone ? colors.volt : colors.muted}
+                  color={isDone ? theme.colors.volt : colors.muted}
                 />
-                <Text style={[styles.setText, isDone && styles.setTextDone]}>
+                <Text
+                  style={[
+                    type.body,
+                    styles.setText,
+                    isDone && { color: colors.muted },
+                  ]}
+                >
                   {set.weight} kg x {set.reps} reps
                 </Text>
               </Pressable>
@@ -93,29 +119,20 @@ const styles = StyleSheet.create({
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   input: {
     flex: 1,
-    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.line,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    color: colors.ink,
     fontSize: 16,
   },
-  unit: { ...type.body, color: colors.muted },
-  hint: { ...type.caption, color: colors.muted },
   sets: { gap: spacing.xs },
   setRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.line,
     borderRadius: radius.md,
     padding: spacing.md,
   },
-  setRowDone: { borderColor: colors.volt, opacity: 0.75 },
-  setText: { ...type.body, fontWeight: '600' },
-  setTextDone: { textDecorationLine: 'line-through', color: colors.muted },
+  setText: { fontWeight: '600' },
 });

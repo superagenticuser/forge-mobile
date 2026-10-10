@@ -1,20 +1,41 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
+import { Link, Tabs } from 'expo-router';
+import { Pressable } from 'react-native';
 
-import { colors } from '@/src/theme';
+import { useTheme } from '@/src/storage/settings';
+
+function SettingsGear() {
+  const theme = useTheme();
+  return (
+    <Link href="/settings" asChild>
+      <Pressable
+        hitSlop={12}
+        style={{ marginRight: 16 }}
+        accessibilityLabel="Open settings"
+      >
+        <Ionicons
+          name="settings-outline"
+          size={24}
+          color={theme.colors.muted}
+        />
+      </Pressable>
+    </Link>
+  );
+}
 
 export default function TabLayout() {
+  const theme = useTheme();
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: colors.ember,
-        tabBarInactiveTintColor: colors.muted,
+        tabBarActiveTintColor: theme.colors.ember,
+        tabBarInactiveTintColor: theme.colors.muted,
         tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.line,
+          backgroundColor: theme.colors.surface,
+          borderTopColor: theme.colors.line,
         },
-        headerStyle: { backgroundColor: colors.bg },
-        headerTintColor: colors.ink,
+        headerStyle: { backgroundColor: theme.colors.bg },
+        headerTintColor: theme.colors.ink,
         headerTitleStyle: { fontWeight: '700' },
         headerShadowVisible: false,
       }}
@@ -23,6 +44,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
+          headerRight: () => <SettingsGear />,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home" size={size} color={color} />
           ),

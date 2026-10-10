@@ -5,26 +5,39 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Program } from '@/src/data/programs';
 import { PROGRAMS } from '@/src/data/programs';
 import { prettify } from '@/src/format';
-import { colors, radius, spacing, type } from '@/src/theme';
+import { useTheme } from '@/src/storage/settings';
+import { radius, spacing } from '@/src/theme';
 
 function ProgramRow({ item }: { item: Program }) {
+  const theme = useTheme();
+  const { colors, type } = theme;
   return (
     <Pressable
-      style={styles.row}
+      style={[
+        styles.row,
+        { backgroundColor: colors.surface, borderColor: colors.line },
+      ]}
       onPress={() =>
         router.push({ pathname: '/program/[id]', params: { id: item.id } })
       }
     >
       <View style={styles.rowText}>
         <Text style={type.subtitle}>{item.name}</Text>
-        <Text style={type.caption} numberOfLines={2}>
+        <Text style={[type.caption, { color: colors.muted }]} numberOfLines={2}>
           {item.tagline}
         </Text>
         <View style={styles.meta}>
-          <View style={styles.levelBadge}>
-            <Text style={styles.levelText}>{prettify(item.level)}</Text>
+          <View
+            style={[
+              styles.levelBadge,
+              { backgroundColor: colors.bg, borderColor: colors.line },
+            ]}
+          >
+            <Text style={[styles.levelText, { color: theme.colors.volt }]}>
+              {prettify(item.level)}
+            </Text>
           </View>
-          <Text style={styles.metaText}>
+          <Text style={[type.caption, { color: colors.muted }]}>
             {item.weeks} weeks · {item.daysPerWeek} days/week
           </Text>
         </View>
@@ -35,8 +48,9 @@ function ProgramRow({ item }: { item: Program }) {
 }
 
 export default function ProgramsScreen() {
+  const theme = useTheme();
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: theme.colors.bg }]}>
       <FlatList
         data={PROGRAMS}
         keyExtractor={(item) => item.id}
@@ -48,15 +62,13 @@ export default function ProgramsScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
+  root: { flex: 1 },
   list: { padding: spacing.lg, gap: spacing.md },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.line,
     padding: spacing.lg,
     gap: spacing.sm,
   },
@@ -68,13 +80,10 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   levelBadge: {
-    backgroundColor: colors.bg,
     borderWidth: 1,
-    borderColor: colors.line,
     borderRadius: radius.pill,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
   },
-  levelText: { fontSize: 11, fontWeight: '700', color: colors.volt },
-  metaText: { ...type.caption },
+  levelText: { fontSize: 11, fontWeight: '700' },
 });

@@ -6,7 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, spacing, type } from '@/src/theme';
+import { SettingsProvider, useTheme } from '@/src/storage/settings';
+import { radius, spacing } from '@/src/theme';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -44,44 +45,75 @@ function useUpdatePrompt() {
   return { ready, dismiss: () => setReady(false) };
 }
 
-export default function RootLayout() {
+function RootLayoutInner() {
+  const theme = useTheme();
   const { ready, dismiss } = useUpdatePrompt();
 
   useEffect(() => {
-    SplashScreen.hideAsync();
-  }, []);
+    if (theme.ready) {
+      SplashScreen.hideAsync();
+    }
+  }, [theme.ready]);
 
   return (
     <ThemeProvider value={DarkTheme}>
       <StatusBar style="light" />
       {ready && (
-        <View style={styles.updateBanner}>
-          <Ionicons name="arrow-down-circle" size={20} color={colors.volt} />
-          <Text style={styles.updateText}>A new version is ready.</Text>
+        <View
+          style={[
+            styles.updateBanner,
+            {
+              backgroundColor: theme.colors.surface,
+              borderBottomColor: theme.colors.volt,
+            },
+          ]}
+        >
+          <Ionicons
+            name="arrow-down-circle"
+            size={20}
+            color={theme.colors.volt}
+          />
+          <Text style={[theme.type.body, styles.updateText]}>
+            A new version is ready.
+          </Text>
           <Pressable
-            style={styles.updateButton}
+            style={[
+              styles.updateButton,
+              { backgroundColor: theme.colors.volt },
+            ]}
             onPress={() => Updates.reloadAsync()}
           >
-            <Text style={styles.updateButtonText}>Restart now</Text>
+            <Text style={[styles.updateButtonText, { color: theme.colors.bg }]}>
+              Restart now
+            </Text>
           </Pressable>
           <Pressable onPress={dismiss} hitSlop={8}>
-            <Ionicons name="close" size={18} color={colors.muted} />
+            <Ionicons name="close" size={18} color={theme.colors.muted} />
           </Pressable>
         </View>
       )}
       <Stack
         screenOptions={{
-          headerStyle: { backgroundColor: colors.bg },
-          headerTintColor: colors.ink,
+          headerStyle: { backgroundColor: theme.colors.bg },
+          headerTintColor: theme.colors.ink,
           headerTitleStyle: { fontWeight: '700' },
-          contentStyle: { backgroundColor: colors.bg },
+          contentStyle: { backgroundColor: theme.colors.bg },
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="exercise/[id]" options={{ title: 'Exercise' }} />
         <Stack.Screen name="program/[id]" options={{ title: 'Program' }} />
+        <Stack.Screen name="settings" options={{ title: 'Settings' }} />
       </Stack>
     </ThemeProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <SettingsProvider>
+      <RootLayoutInner />
+    </SettingsProvider>
   );
 }
 
@@ -90,18 +122,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: colors.volt,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  updateText: { ...type.body, flex: 1 },
+  updateText: { flex: 1 },
   updateButton: {
-    backgroundColor: colors.volt,
     borderRadius: radius.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
   },
-  updateButtonText: { fontSize: 13, fontWeight: '800', color: colors.bg },
+  updateButtonText: { fontSize: 13, fontWeight: '800' },
 });

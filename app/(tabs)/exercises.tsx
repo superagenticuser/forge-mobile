@@ -14,7 +14,8 @@ import {
 import type { Exercise } from '@/src/data/exercises';
 import { EXERCISES, MUSCLE_GROUPS } from '@/src/data/exercises';
 import { muscleLabel, prettify } from '@/src/format';
-import { colors, radius, spacing, type } from '@/src/theme';
+import { useTheme } from '@/src/storage/settings';
+import { radius, spacing } from '@/src/theme';
 
 const MUSCLES = Object.keys(MUSCLE_GROUPS);
 const EQUIPMENT = [...new Set(EXERCISES.map((e) => e.equipment))].sort();
@@ -29,17 +30,20 @@ function Chip({
   active: boolean;
   onPress: () => void;
 }) {
+  const theme = useTheme();
+  const { colors, type } = theme;
   return (
     <Pressable
       onPress={onPress}
-      style={[styles.chip, active ? styles.chipActive : styles.chipIdle]}
+      style={[
+        styles.chip,
+        {
+          backgroundColor: active ? colors.ember : colors.surface,
+          borderColor: active ? colors.ember : colors.line,
+        },
+      ]}
     >
-      <Text
-        style={[
-          type.chip,
-          active ? styles.chipTextActive : styles.chipTextIdle,
-        ]}
-      >
+      <Text style={[type.chip, { color: active ? colors.bg : colors.muted }]}>
         {label}
       </Text>
     </Pressable>
@@ -51,13 +55,21 @@ function openExercise(id: string) {
 }
 
 function ExerciseRow({ item }: { item: Exercise }) {
+  const theme = useTheme();
+  const { colors, type } = theme;
   return (
-    <Pressable style={styles.row} onPress={() => openExercise(item.id)}>
+    <Pressable
+      style={[
+        styles.row,
+        { backgroundColor: colors.surface, borderColor: colors.line },
+      ]}
+      onPress={() => openExercise(item.id)}
+    >
       <View style={styles.rowText}>
         <Text style={type.subtitle} numberOfLines={1}>
           {item.name}
         </Text>
-        <Text style={type.caption}>
+        <Text style={[type.caption, { color: colors.muted }]}>
           {muscleLabel(item.primary)} · {prettify(item.equipment)} ·{' '}
           {prettify(item.level)}
         </Text>
@@ -68,6 +80,8 @@ function ExerciseRow({ item }: { item: Exercise }) {
 }
 
 export default function ExercisesScreen() {
+  const theme = useTheme();
+  const { colors, type } = theme;
   const [query, setQuery] = useState('');
   const [muscle, setMuscle] = useState<string | null>(null);
   const [equipment, setEquipment] = useState<string | null>(null);
@@ -91,7 +105,7 @@ export default function ExercisesScreen() {
     query.trim() !== '';
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: colors.bg }]}>
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.id}
@@ -99,10 +113,18 @@ export default function ExercisesScreen() {
         contentContainerStyle={styles.list}
         ListHeaderComponent={
           <View style={styles.header}>
-            <View style={styles.searchBox}>
+            <View
+              style={[
+                styles.searchBox,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.line,
+                },
+              ]}
+            >
               <Ionicons name="search" size={18} color={colors.muted} />
               <TextInput
-                style={styles.searchInput}
+                style={[type.body, styles.searchInput, { color: colors.ink }]}
                 placeholder="Search exercises"
                 placeholderTextColor={colors.muted}
                 value={query}
@@ -120,7 +142,11 @@ export default function ExercisesScreen() {
               )}
             </View>
 
-            <Text style={styles.groupLabel}>Muscle group</Text>
+            <Text
+              style={[type.caption, styles.groupLabel, { color: colors.muted }]}
+            >
+              Muscle group
+            </Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -141,7 +167,11 @@ export default function ExercisesScreen() {
               ))}
             </ScrollView>
 
-            <Text style={styles.groupLabel}>Equipment</Text>
+            <Text
+              style={[type.caption, styles.groupLabel, { color: colors.muted }]}
+            >
+              Equipment
+            </Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -162,7 +192,11 @@ export default function ExercisesScreen() {
               ))}
             </ScrollView>
 
-            <Text style={styles.groupLabel}>Level</Text>
+            <Text
+              style={[type.caption, styles.groupLabel, { color: colors.muted }]}
+            >
+              Level
+            </Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -183,7 +217,7 @@ export default function ExercisesScreen() {
               ))}
             </ScrollView>
 
-            <Text style={styles.count}>
+            <Text style={[type.caption, { color: colors.muted }]}>
               {filtered.length} of {EXERCISES.length} exercises
             </Text>
           </View>
@@ -191,12 +225,12 @@ export default function ExercisesScreen() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={type.subtitle}>No exercises match</Text>
-            <Text style={type.caption}>
+            <Text style={[type.caption, { color: colors.muted }]}>
               Try a different search or clear the filters.
             </Text>
             {hasFilters && (
               <Pressable
-                style={styles.clearButton}
+                style={[styles.clearButton, { backgroundColor: colors.ember }]}
                 onPress={() => {
                   setQuery('');
                   setMuscle(null);
@@ -204,7 +238,9 @@ export default function ExercisesScreen() {
                   setLevel(null);
                 }}
               >
-                <Text style={styles.clearText}>Clear all filters</Text>
+                <Text style={[type.chip, { color: colors.bg }]}>
+                  Clear all filters
+                </Text>
               </Pressable>
             )}
           </View>
@@ -215,22 +251,20 @@ export default function ExercisesScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
+  root: { flex: 1 },
   list: { padding: spacing.lg, gap: spacing.sm },
   header: { gap: spacing.sm, marginBottom: spacing.sm },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.line,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
   },
-  searchInput: { flex: 1, ...type.body, color: colors.ink },
-  groupLabel: { ...type.caption, fontWeight: '600', marginTop: spacing.sm },
+  searchInput: { flex: 1 },
+  groupLabel: { fontWeight: '600', marginTop: spacing.sm },
   chipRow: { flexDirection: 'row' },
   chip: {
     paddingHorizontal: spacing.md,
@@ -239,18 +273,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginRight: spacing.sm,
   },
-  chipIdle: { backgroundColor: colors.surface, borderColor: colors.line },
-  chipActive: { backgroundColor: colors.ember, borderColor: colors.ember },
-  chipTextIdle: { color: colors.muted },
-  chipTextActive: { color: colors.bg },
-  count: { ...type.caption, marginTop: spacing.xs },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.line,
     padding: spacing.md,
     gap: spacing.sm,
   },
@@ -258,10 +285,8 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', gap: spacing.sm, paddingTop: spacing.xxl },
   clearButton: {
     marginTop: spacing.sm,
-    backgroundColor: colors.ember,
     borderRadius: radius.pill,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
   },
-  clearText: { ...type.chip, color: colors.bg },
 });
