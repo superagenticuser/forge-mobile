@@ -1,11 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { EXERCISES } from '@/src/data/exercises';
 import { PROGRAMS } from '@/src/data/programs';
 import { prettify } from '@/src/format';
 import { useTheme } from '@/src/storage/settings';
+import { useWorkout } from '@/src/storage/workout';
 import { radius, spacing } from '@/src/theme';
 
 const byId = new Map(EXERCISES.map((e) => [e.id, e]));
@@ -30,6 +32,8 @@ export default function ProgramDetailScreen() {
   const theme = useTheme();
   const { colors, type } = theme;
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { startProgramDay } = useWorkout();
+  const [starting, setStarting] = useState<string | null>(null);
   const program = programById.get(id ?? '');
 
   if (!program) {
@@ -70,9 +74,38 @@ export default function ProgramDetailScreen() {
 
       {program.days.map((day) => (
         <View key={day.name} style={styles.day}>
-          <Text style={[type.subtitle, { color: colors.accent }]}>
-            {day.name}
-          </Text>
+          <View style={styles.dayHeader}>
+            <Text style={[type.subtitle, { color: colors.accent, flex: 1 }]}>
+              {day.name}
+            </Text>
+            <Pressable
+              style={[
+                styles.startDayButton,
+                { backgroundColor: colors.accent },
+              ]}
+              disabled={starting !== null}
+              onPress={async () => {
+                setStarting(day.name);
+                try {
+                  await startProgramDay(
+                    program.id,
+                    program.name,
+                    day.name,
+                    day.exercises
+                  );
+                  router.push('/workout');
+                } finally {
+                  setStarting(null);
+                }
+              }}
+              accessibilityLabel={`Start ${day.name}`}
+            >
+              <Ionicons name="play" size={14} color={colors.bg} />
+              <Text style={[styles.startDayText, { color: colors.bg }]}>
+                {starting === day.name ? 'Starting…' : 'Start'}
+              </Text>
+            </Pressable>
+          </View>
           {day.exercises.map((entry) => {
             const exercise = byId.get(entry.id);
             return (
@@ -141,6 +174,16 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   day: { gap: spacing.sm },
+  dayHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  startDayButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  startDayText: { fontSize: 13, fontWeight: '800' },
   exerciseRow: {
     flexDirection: 'row',
     alignItems: 'center',

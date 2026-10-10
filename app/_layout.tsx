@@ -16,6 +16,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { SettingsProvider, useTheme } from '@/src/storage/settings';
 import { LibraryProvider } from '@/src/storage/library';
+import { WorkoutProvider } from '@/src/storage/workout';
 import { radius, spacing } from '@/src/theme';
 
 SplashScreen.preventAutoHideAsync();
@@ -115,6 +116,11 @@ function RootLayoutInner() {
         <Stack.Screen name="exercise/[id]" options={{ title: 'Exercise' }} />
         <Stack.Screen name="program/[id]" options={{ title: 'Program' }} />
         <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+        <Stack.Screen name="workout" options={{ title: 'Workout' }} />
+        <Stack.Screen
+          name="workout-summary"
+          options={{ title: 'Workout complete' }}
+        />
       </Stack>
     </ThemeProvider>
   );
@@ -125,7 +131,9 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <SettingsProvider>
         <LibraryProvider>
-          <RootLayoutInner />
+          <WorkoutProvider>
+            <RootLayoutInner />
+          </WorkoutProvider>
         </LibraryProvider>
       </SettingsProvider>
     </SafeAreaProvider>

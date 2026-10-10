@@ -6,8 +6,10 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ConfirmDialog } from '@/src/components/ConfirmDialog';
 import WarmupSection from '@/src/components/WarmupSection';
 import { muscleLabel, prettify } from '@/src/format';
+import { fmtWeight } from '@/src/lib/training';
 import { useLibrary } from '@/src/storage/library';
 import { useTheme } from '@/src/storage/settings';
+import { useExerciseHistory, useWorkout } from '@/src/storage/workout';
 import { radius, spacing } from '@/src/theme';
 
 function Badge({ label }: { label: string }) {
@@ -77,9 +79,12 @@ export default function ExerciseDetailScreen() {
   const { colors, type, settings } = theme;
   const { id } = useLocalSearchParams<{ id: string }>();
   const { byId, exercises, isFav, toggleFav, deleteCustom } = useLibrary();
+  const { startFreeWorkout } = useWorkout();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [starting, setStarting] = useState(false);
 
   const exercise = byId.get(id ?? '');
+  const history = useExerciseHistory(exercise?.id ?? '');
 
   const similar = useMemo(() => {
     if (!exercise) return [];
@@ -189,11 +194,46 @@ export default function ExerciseDetailScreen() {
       </Section>
 
       <Section title="Estimated 1RM">
-        <Text style={[type.body, { color: colors.muted }]}>
-          Log a workout to see your estimated max, calculated with the Epley
-          formula from your best logged set.
-        </Text>
+        {history.ready && history.best1RMKg > 0 ? (
+          <View style={styles.oneRmRow}>
+            <Text style={[styles.oneRmValue, { color: colors.accent }]}>
+              {fmtWeight(history.best1RMKg, settings.units)}
+            </Text>
+            <Text style={[type.caption, { color: colors.muted }]}>
+              Epley estimate from your best logged set
+              {history.lastWeightKg != null &&
+                ` · last: ${fmtWeight(history.lastWeightKg, settings.units)}`}
+              {history.sessionCount > 0 &&
+                ` · ${history.sessionCount} logged session${history.sessionCount > 1 ? 's' : ''}`}
+            </Text>
+          </View>
+        ) : (
+          <Text style={[type.body, { color: colors.muted }]}>
+            Log a workout to see your estimated max, calculated with the Epley
+            formula from your best logged set.
+          </Text>
+        )}
       </Section>
+
+      <Pressable
+        style={[styles.startWorkoutButton, { backgroundColor: colors.accent }]}
+        disabled={starting}
+        onPress={async () => {
+          setStarting(true);
+          try {
+            await startFreeWorkout([exercise.id]);
+            router.push('/workout');
+          } finally {
+            setStarting(false);
+          }
+        }}
+        accessibilityLabel={`Start a workout with ${exercise.name}`}
+      >
+        <Ionicons name="play" size={18} color={colors.bg} />
+        <Text style={[type.chip, { color: colors.bg }]}>
+          {starting ? 'Starting…' : 'Start workout with this exercise'}
+        </Text>
+      </Pressable>
 
       {exercise.equipment !== 'bodyweight' && (
         <Section title="Warm-up sets">
@@ -407,6 +447,16 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   section: { gap: spacing.sm },
+  oneRmRow: { gap: 2 },
+  oneRmValue: { fontSize: 26, fontWeight: '800' },
+  startWorkoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    borderRadius: radius.pill,
+    paddingVertical: spacing.md,
+  },
   stepRow: { flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' },
   stepNumber: {
     width: 26,

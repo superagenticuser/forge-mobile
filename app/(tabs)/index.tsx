@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { EXERCISES, MUSCLE_GROUPS } from '@/src/data/exercises';
 import { PROGRAMS } from '@/src/data/programs';
 import { useTheme } from '@/src/storage/settings';
+import { useWorkout } from '@/src/storage/workout';
 import { radius, spacing, type as typeBase } from '@/src/theme';
 
 const stats = [
@@ -31,6 +32,13 @@ const links = [
 export default function HomeScreen() {
   const theme = useTheme();
   const { colors, type } = theme;
+  const { workout, startFreeWorkout } = useWorkout();
+
+  const onStartWorkout = async () => {
+    await startFreeWorkout();
+    router.push('/workout');
+  };
+
   return (
     <ScrollView
       style={[styles.root, { backgroundColor: colors.bg }]}
@@ -43,6 +51,28 @@ export default function HomeScreen() {
         <Text style={[styles.tagline, { color: colors.muted }]}>
           Train with intent.
         </Text>
+        <Pressable
+          style={[styles.startButton, { backgroundColor: colors.accent }]}
+          onPress={() => {
+            if (workout) {
+              router.push('/workout');
+            } else {
+              onStartWorkout();
+            }
+          }}
+          accessibilityLabel={
+            workout ? 'Resume the active workout' : 'Start a free workout'
+          }
+        >
+          <Ionicons
+            name={workout ? 'refresh' : 'play'}
+            size={20}
+            color={colors.bg}
+          />
+          <Text style={[styles.startButtonText, { color: colors.bg }]}>
+            {workout ? 'Resume workout' : 'Start workout'}
+          </Text>
+        </Pressable>
         <View style={[styles.otaBadge, { backgroundColor: theme.colors.volt }]}>
           <Ionicons name="flash" size={14} color={colors.bg} />
           <Text style={[styles.otaBadgeText, { color: colors.bg }]}>
@@ -119,6 +149,18 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.lg },
   hero: { paddingTop: spacing.xl, paddingBottom: spacing.sm },
   tagline: { ...typeBase.body, marginTop: spacing.xs },
+  startButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    borderRadius: radius.pill,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    marginTop: spacing.md,
+    alignSelf: 'stretch',
+  },
+  startButtonText: { fontSize: 17, fontWeight: '800' },
   otaBadge: {
     flexDirection: 'row',
     alignItems: 'center',
