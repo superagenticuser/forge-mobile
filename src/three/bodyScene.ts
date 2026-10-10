@@ -166,6 +166,7 @@ export class BodyScene {
     );
     this.camera.position.set(0, 2.05, this.camDist);
     this.camera.lookAt(0, 1.85, 0);
+    this.fitCameraToView();
 
     this.scene.add(new THREE.HemisphereLight(0xaab4d4, 0x0b0d12, 1.4));
     const key = new THREE.DirectionalLight(0xffffff, 1.6);
@@ -754,6 +755,21 @@ export class BodyScene {
     this.renderer.setSize(w, h);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
+    this.fitCameraToView();
+  }
+
+  /** Adjust camera distance so the body fills the view nicely. */
+  private fitCameraToView(): void {
+    const vFov = (this.camera.fov * Math.PI) / 180;
+    const aspect = this.width / this.height;
+    // Body approx: 3.5 tall, 1.7 wide. Fill 92% of the limiting dimension.
+    const bodyH = 3.5;
+    const bodyW = 1.7;
+    const distH = bodyH / 0.92 / (2 * Math.tan(vFov / 2));
+    const hFov = 2 * Math.atan(Math.tan(vFov / 2) * aspect);
+    const distW = bodyW / 0.92 / (2 * Math.tan(hFov / 2));
+    this.camDist = Math.max(distH, distW, 3.2);
+    this.camera.position.z = this.camDist;
   }
 
   setActive(active: boolean): void {
