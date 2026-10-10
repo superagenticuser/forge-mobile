@@ -96,12 +96,6 @@ export default function HomeScreen() {
             {workout ? 'Resume workout' : 'Start workout'}
           </Text>
         </Pressable>
-        <View style={[styles.otaBadge, { backgroundColor: theme.colors.volt }]}>
-          <Ionicons name="flash" size={14} color={colors.bg} />
-          <Text style={[styles.otaBadgeText, { color: colors.bg }]}>
-            Updated over the air · v0.3
-          </Text>
-        </View>
       </View>
 
       <View style={styles.stats}>
@@ -242,17 +236,6 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
   },
   startButtonText: { fontSize: 17, fontWeight: '800' },
-  otaBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    alignSelf: 'flex-start',
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    marginTop: spacing.sm,
-  },
-  otaBadgeText: { fontSize: 12, fontWeight: '800' },
   stats: { flexDirection: 'row', gap: spacing.md },
   bodySection: { gap: spacing.sm },
   bodyHeader: {
