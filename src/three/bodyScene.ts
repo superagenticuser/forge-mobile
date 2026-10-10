@@ -112,6 +112,7 @@ export class BodyScene {
   private mats: Record<string, THREE.MeshStandardMaterial> = {};
   private muscleMeshes: THREE.Mesh[] = [];
   private raycaster = new THREE.Raycaster();
+  private currentFinish: BodyFinish = 'standard';
 
   private width: number;
   private height: number;
@@ -133,6 +134,10 @@ export class BodyScene {
   private raf = 0;
   private dead = false;
   private active = true;
+  // Reused scratch objects to avoid per-frame/per-tap allocations that
+  // pressure the GC and cause progressive slowdown on Android.
+  private scratchColor = new THREE.Color();
+  private scratchVec2 = new THREE.Vector2();
 
   constructor(gl: any, opts: BodySceneOptions) {
     this.gl = gl;
@@ -589,10 +594,11 @@ export class BodyScene {
   // ---- highlight / heat / soreness / finish APIs (ported from web) ----
 
   private reset(): void {
+    const baseHex = (FINISHES[this.currentFinish] || FINISHES.standard).base;
     for (const id in this.mats) {
       this.mats[id].emissive.setHex(0x000000);
       this.mats[id].emissiveIntensity = 0;
-      this.mats[id].color.setHex(VTHEME.base);
+      this.mats[id].color.setHex(baseHex);
     }
   }
 
@@ -603,7 +609,7 @@ export class BodyScene {
     allSoft = false
   ): void {
     this.reset();
-    const accent = new THREE.Color(this.accentHex);
+    const accent = this.scratchColor.set(this.accentHex);
     if (allSoft) {
       for (const id in this.mats) {
         this.mats[id].emissive.copy(accent);
@@ -671,6 +677,7 @@ export class BodyScene {
   setFinish(name: BodyFinish): void {
     try {
       const f = FINISHES[name] || FINISHES.standard;
+      this.currentFinish = name;
       const apply = (m: THREE.MeshStandardMaterial | undefined | null) => {
         if (!m) return;
         // Update uniforms only; avoid shader recompiles which crash expo-gl.
@@ -773,7 +780,7 @@ export class BodyScene {
 
   /** Tap at view coords; returns the raw muscle mesh id or null. */
   tap(x: number, y: number): string | null {
-    const ndc = new THREE.Vector2(
+    const ndc = this.scratchVec2.set(
       (x / this.width) * 2 - 1,
       -((y / this.height) * 2 - 1)
     );
