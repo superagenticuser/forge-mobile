@@ -17,6 +17,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { SettingsProvider, useTheme } from '@/src/storage/settings';
 import { LibraryProvider } from '@/src/storage/library';
+import { ProgramsProvider } from '@/src/storage/programs';
 import { WorkoutProvider } from '@/src/storage/workout';
 import { radius, spacing } from '@/src/theme';
 
@@ -133,9 +134,11 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <SettingsProvider>
           <LibraryProvider>
-            <WorkoutProvider>
-              <RootLayoutInner />
-            </WorkoutProvider>
+            <ProgramsProvider>
+              <WorkoutProvider>
+                <RootLayoutInner />
+              </WorkoutProvider>
+            </ProgramsProvider>
           </LibraryProvider>
         </SettingsProvider>
       </SafeAreaProvider>

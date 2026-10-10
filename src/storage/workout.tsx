@@ -110,6 +110,8 @@ export interface ActiveWorkout {
   programId: string | null;
   programName: string;
   dayName: string;
+  /** Index of the program day (for done-tracking); null for free workouts. */
+  dayIdx: number | null;
   week: number | null;
   startedAt: number;
   exercises: SessionExercise[];
@@ -122,6 +124,10 @@ export interface WorkoutSeedExercise {
   exerciseId: string;
   targetSets?: number;
   targetReps?: string;
+  /** Planned working weight in kg (mesocycle); prefilled instead of history. */
+  weightKg?: number;
+  /** Per-set weights in kg (pyramid); overrides weightKg. */
+  weightsKg?: number[];
 }
 
 export interface RestState {
@@ -295,12 +301,18 @@ interface WorkoutContextValue {
   workout: ActiveWorkout | null;
   rest: RestState | null;
   lastSummary: WorkoutSummary | null;
-  startFreeWorkout: (exerciseIds?: string[]) => Promise<void>;
+  startFreeWorkout: (
+    exerciseIds?: string[],
+    linkAll?: boolean
+  ) => Promise<void>;
   startProgramDay: (
     programId: string,
     programName: string,
     dayName: string,
-    dayExercises: ProgramDayExercise[]
+    dayExercises: ProgramDayExercise[],
+    dayIdx?: number,
+    week?: number,
+    travelMode?: boolean
   ) => Promise<void>;
   addExercise: (exerciseId: string) => void;
   removeExercise: (exKey: string) => void;
@@ -566,13 +578,18 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
         const lastW = lastWeightKg(s.exerciseId, logs);
         const sets: SessionSet[] = [];
         for (let k = 0; k < targetSets; k++) {
+          // Pyramid per-set weights win, then mesocycle planned weight,
+          // then the last logged weight (web behavior).
+          const plannedKg =
+            s.weightsKg && s.weightsKg[k] != null ? s.weightsKg[k] : s.weightKg;
+          const prefillKg = plannedKg ?? lastW;
           sets.push({
             key: nextKey('set'),
             weight:
-              lastW != null
+              prefillKg != null
                 ? String(
                     Math.round(
-                      (units === 'lb' ? lastW * 2.20462 : lastW) * 10
+                      (units === 'lb' ? prefillKg * 2.20462 : prefillKg) * 10
                     ) / 10
                   )
                 : '',
@@ -601,7 +618,7 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
   );
 
   const startFreeWorkout = useCallback(
-    async (exerciseIds: string[] = []) => {
+    async (exerciseIds: string[] = [], linkAll = false) => {
       await ensureNotifPermission();
       const logs = await loadWorkoutLogs();
       const units = settingsRef.current.units;
@@ -610,14 +627,16 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
         targetSets: 3,
         targetReps: '',
       }));
+      const exercises = seedExercises(seeds, logs, units);
       setWorkout({
         programId: null,
         programName: '',
         dayName: 'Free workout',
+        dayIdx: null,
         week: null,
         startedAt: Date.now(),
-        exercises: seedExercises(seeds, logs, units),
-        linkedAfter: [],
+        exercises,
+        linkedAfter: linkAll ? exercises.slice(0, -1).map((e) => e.key) : [],
         travelMode: false,
       });
       setLastSummary(null);
@@ -630,7 +649,10 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
       programId: string,
       programName: string,
       dayName: string,
-      dayExercises: ProgramDayExercise[]
+      dayExercises: ProgramDayExercise[],
+      dayIdx?: number,
+      week?: number,
+      travelMode = false
     ) => {
       await ensureNotifPermission();
       const logs = await loadWorkoutLogs();
@@ -639,19 +661,28 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
         programId,
         programName,
         dayName,
-        week: null,
+        dayIdx: dayIdx ?? null,
+        week: week ?? null,
         startedAt: Date.now(),
         exercises: seedExercises(
           dayExercises.map((e) => ({
             exerciseId: e.id,
             targetSets: e.sets,
             targetReps: e.reps,
+            weightKg:
+              'weight' in e && typeof e.weight === 'number'
+                ? e.weight
+                : undefined,
+            weightsKg:
+              'weightsArr' in e && Array.isArray(e.weightsArr)
+                ? (e.weightsArr as number[])
+                : undefined,
           })),
           logs,
           units
         ),
         linkedAfter: [],
-        travelMode: false,
+        travelMode,
       });
       setLastSummary(null);
     },
@@ -1203,6 +1234,15 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
         ts: log.ts,
         data: JSON.stringify(log),
       });
+
+      // Program adherence (web: done["pid:di"] in js/workout.js woFinish).
+      if (w.programId && w.dayIdx != null) {
+        const key = `${w.programId}:${w.dayIdx}`;
+        const done =
+          (await kvGetJSON<Record<string, string[]>>('forge-done')) ?? {};
+        done[key] = [...(done[key] ?? []), log.date];
+        await kvSetJSON('forge-done', done);
+      }
 
       // Gamification: award XP like the web app (2/set, 50/PR, 25 streak
       // bonus) and record it in the XP log for the monthly board.

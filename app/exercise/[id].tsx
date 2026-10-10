@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/src/components/ConfirmDialog';
 import { BodyViewer } from '@/src/components/BodyViewer';
+import { PyramidModal } from '@/src/components/PyramidModal';
 import WarmupSection from '@/src/components/WarmupSection';
 import { muscleLabel, prettify } from '@/src/format';
 import { fmtWeight } from '@/src/lib/training';
@@ -85,6 +86,7 @@ export default function ExerciseDetailScreen() {
   const { startFreeWorkout } = useWorkout();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [pyramidOpen, setPyramidOpen] = useState(false);
 
   const exercise = byId.get(id ?? '');
   const history = useExerciseHistory(exercise?.id ?? '');
@@ -243,6 +245,20 @@ export default function ExerciseDetailScreen() {
         <Ionicons name="play" size={18} color={colors.bg} />
         <Text style={[type.chip, { color: colors.bg }]}>
           {starting ? 'Starting…' : 'Start workout with this exercise'}
+        </Text>
+      </Pressable>
+
+      <Pressable
+        style={[
+          styles.startWorkoutButton,
+          { borderColor: colors.line, borderWidth: 1 },
+        ]}
+        onPress={() => setPyramidOpen(true)}
+        accessibilityLabel={`Build a pyramid workout for ${exercise.name}`}
+      >
+        <Ionicons name="triangle-outline" size={18} color={colors.accent} />
+        <Text style={[type.chip, { color: colors.accent }]}>
+          Pyramid builder
         </Text>
       </Pressable>
 
@@ -425,6 +441,14 @@ export default function ExerciseDetailScreen() {
         confirmLabel="Delete"
         onConfirm={onDelete}
         onCancel={() => setConfirmDelete(false)}
+      />
+      <PyramidModal
+        visible={pyramidOpen}
+        exercise={exercise}
+        onClose={() => setPyramidOpen(false)}
+        onStart={async () => {
+          router.push('/workout');
+        }}
       />
     </ScrollView>
   );
