@@ -760,6 +760,7 @@ export class BodyScene {
 
   /** Adjust camera distance so the body fills the view width nicely. */
   private fitCameraToView(): void {
+    if (this.width <= 0 || this.height <= 0) return;
     const vFov = (this.camera.fov * Math.PI) / 180;
     const aspect = this.width / this.height;
     // Body approx: 3.5 tall, 1.7 wide. Fit height with margin, like the web app.
