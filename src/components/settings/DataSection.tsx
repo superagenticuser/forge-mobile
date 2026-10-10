@@ -461,7 +461,7 @@ function RestoreRow({
 }
 
 const styles = StyleSheet.create({
-  root: { gap: spacing.sm, padding: spacing.md },
+  root: { gap: spacing.sm, paddingVertical: spacing.sm },
   meter: {
     borderWidth: 1,
     borderRadius: radius.md,
