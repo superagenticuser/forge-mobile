@@ -187,7 +187,12 @@ export function BodyViewer(props: BodyViewerProps) {
       const group = groupOf(mid);
       const p = propsRef.current;
       if (p.mode === 'soreness') {
-        p.onSorenessCycle?.(group);
+        // onSorenessCycle is async; catch rejections to avoid unhandled errors.
+        Promise.resolve(p.onSorenessCycle?.(group)).catch((e) => {
+          const msg = e instanceof Error ? e.message : String(e);
+          console.warn('BodyViewer: soreness cycle failed', e);
+          setGlFailed(`soreness: ${msg}`);
+        });
         return;
       }
       selectedRef.current = group;
