@@ -34,6 +34,8 @@ export interface Settings {
   restShort: number;
   restLong: number;
   voiceCues: boolean;
+  /** Show the voice-control mic button in the workout player. */
+  voiceControl: boolean;
   reminder: string;
   advanced: boolean;
   haptics: boolean;
@@ -55,6 +57,7 @@ export const DEFAULT_SETTINGS: Settings = {
   restShort: 60,
   restLong: 180,
   voiceCues: false,
+  voiceControl: true,
   reminder: '',
   advanced: false,
   haptics: true,
@@ -109,6 +112,10 @@ function sanitizeSettings(raw: unknown): Settings {
       typeof s.voiceCues === 'boolean'
         ? s.voiceCues
         : DEFAULT_SETTINGS.voiceCues,
+    voiceControl:
+      typeof s.voiceControl === 'boolean'
+        ? s.voiceControl
+        : DEFAULT_SETTINGS.voiceControl,
     reminder: typeof s.reminder === 'string' ? s.reminder : '',
     advanced:
       typeof s.advanced === 'boolean' ? s.advanced : DEFAULT_SETTINGS.advanced,

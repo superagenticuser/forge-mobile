@@ -447,6 +447,11 @@ export default function SettingsScreen() {
           onChange={(v) => updateSettings({ voiceCues: v })}
         />
         <ToggleRow
+          label="Voice control"
+          value={settings.voiceControl}
+          onChange={(v) => updateSettings({ voiceControl: v })}
+        />
+        <ToggleRow
           label="Haptic feedback"
           value={settings.haptics}
           onChange={(v) => updateSettings({ haptics: v })}

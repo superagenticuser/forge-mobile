@@ -21,6 +21,7 @@ import { ConfirmDialog } from '@/src/components/ConfirmDialog';
 import { ExercisePickerModal } from '@/src/components/ExercisePickerModal';
 import { PlateCalculatorModal } from '@/src/components/PlateCalculatorModal';
 import { SetTypeModal } from '@/src/components/SetTypeModal';
+import { VoiceButton } from '@/src/components/VoiceControl';
 import { CameraModal } from '@/src/components/camera/CameraModal';
 import { warmupSets } from '@/src/components/WarmupSection';
 import {
@@ -1068,6 +1069,7 @@ export default function WorkoutScreen() {
           <Ionicons name="person-outline" size={16} color={colors.accent} />
           <Text style={[type.chip, { color: colors.accent }]}>Mirror</Text>
         </Pressable>
+        <VoiceButton />
       </View>
 
       {notice && (
