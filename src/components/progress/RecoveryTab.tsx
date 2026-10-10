@@ -3,7 +3,7 @@
 // coach tips wired to the recovery score. Ports the web app's recovery
 // dashboard (js/views.js getRecoveryStats/renderBodyRecovery/recoveryScore,
 // js/progress.js check-in + trackers).
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -53,6 +53,9 @@ export function RecoveryTab({
   const [soreByGroup, setSoreByGroup] = useState<Record<string, SorenessLevel>>(
     {}
   );
+  // Guard against rapid concurrent soreness cycles which race the DB
+  // read-modify-write and flood the GL thread with material updates.
+  const cyclingRef = useRef(false);
 
   const todayKey = fmtDateKey(new Date());
   const score = useMemo(() => recoveryScore(logs), [logs]);
@@ -72,8 +75,16 @@ export function RecoveryTab({
 
   const onSorenessCycle = useCallback(
     async (groupId: string) => {
-      const day = await cycleSoreness(todayKey, groupId);
-      setSoreByGroup(day as Record<string, SorenessLevel>);
+      // Ignore taps while a cycle is in flight to prevent DB races and
+      // GL thread flooding.
+      if (cyclingRef.current) return;
+      cyclingRef.current = true;
+      try {
+        const day = await cycleSoreness(todayKey, groupId);
+        setSoreByGroup(day as Record<string, SorenessLevel>);
+      } finally {
+        cyclingRef.current = false;
+      }
     },
     [todayKey]
   );
