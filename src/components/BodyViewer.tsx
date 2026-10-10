@@ -2,6 +2,10 @@
 // drag rotate, pinch zoom, front/back toggle, and an anatomy info card.
 // Reusable from Home, exercise detail, and the recovery phase (soreness mode).
 
+// Emergency kill switch: set to false to disable all GL rendering (renders a
+// static placeholder instead). Used to recover from native GL crashes.
+export const BODY_3D_ENABLED = false;
+
 import { Ionicons } from '@expo/vector-icons';
 import { GLView } from 'expo-gl';
 import { useFocusEffect } from 'expo-router';
@@ -236,6 +240,29 @@ export function BodyViewer(props: BodyViewerProps) {
   );
 
   const info = selected ? MUSCLE_INFO[selected] : null;
+
+  if (!BODY_3D_ENABLED) {
+    return (
+      <View
+        style={[
+          styles.root,
+          {
+            height,
+            backgroundColor: colors.surface,
+            borderColor: colors.line,
+            borderWidth: 1,
+            borderRadius: 12,
+            alignItems: 'center',
+            justifyContent: 'center',
+          },
+        ]}
+      >
+        <Text style={[type.caption, { color: colors.muted }]}>
+          3D body is temporarily disabled while we fix a crash.
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View
