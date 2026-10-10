@@ -12,6 +12,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { SettingsProvider, useTheme } from '@/src/storage/settings';
 import { LibraryProvider } from '@/src/storage/library';
@@ -121,11 +122,13 @@ function RootLayoutInner() {
 
 export default function RootLayout() {
   return (
-    <SettingsProvider>
-      <LibraryProvider>
-        <RootLayoutInner />
-      </LibraryProvider>
-    </SettingsProvider>
+    <SafeAreaProvider>
+      <SettingsProvider>
+        <LibraryProvider>
+          <RootLayoutInner />
+        </LibraryProvider>
+      </SettingsProvider>
+    </SafeAreaProvider>
   );
 }
 

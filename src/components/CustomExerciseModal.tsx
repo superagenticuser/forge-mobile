@@ -10,6 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MUSCLE_GROUPS } from '@/src/data/exercises';
 import { muscleLabel, prettify } from '@/src/format';
@@ -128,7 +129,10 @@ export function CustomExerciseModal({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={[styles.root, { backgroundColor: colors.bg }]}>
+      <SafeAreaView
+        style={[styles.root, { backgroundColor: colors.bg }]}
+        edges={['top', 'bottom']}
+      >
         <View style={[styles.header, { borderBottomColor: colors.line }]}>
           <Text style={type.subtitle}>New custom exercise</Text>
           <Pressable onPress={onClose} hitSlop={12}>
@@ -192,7 +196,13 @@ export function CustomExerciseModal({
 
           <Text style={[type.caption, { color: colors.muted }]}>Level</Text>
           <OptionChips options={LEVELS} selected={level} onSelect={setLevel} />
-
+        </ScrollView>
+        <View
+          style={[
+            styles.footer,
+            { borderTopColor: colors.line, backgroundColor: colors.bg },
+          ]}
+        >
           <Pressable
             style={[
               styles.saveButton,
@@ -205,8 +215,8 @@ export function CustomExerciseModal({
               {saving ? 'Saving...' : 'Save exercise'}
             </Text>
           </Pressable>
-        </ScrollView>
-      </View>
+        </View>
+      </SafeAreaView>
     </Modal>
   );
 }
@@ -222,6 +232,12 @@ const styles = StyleSheet.create({
   },
   body: { flex: 1 },
   bodyContent: { padding: spacing.lg, gap: spacing.sm },
+  footer: {
+    borderTopWidth: 1,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
+  },
   input: {
     borderWidth: 1,
     borderRadius: radius.md,
@@ -236,7 +252,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   saveButton: {
-    marginTop: spacing.md,
     borderRadius: radius.pill,
     paddingVertical: spacing.md,
     alignItems: 'center',
