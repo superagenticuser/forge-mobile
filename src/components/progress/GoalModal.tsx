@@ -4,8 +4,11 @@
 import { useMemo, useState } from 'react';
 import {
   FlatList,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -159,8 +162,17 @@ export function GoalModal({
             <Text style={[type.body, { color: colors.accent }]}>Cancel</Text>
           </Pressable>
         </View>
-        <View style={styles.body}>
-          <Text style={[type.caption, { color: colors.muted }]}>Goal type</Text>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        >
+          <ScrollView
+            style={styles.body}
+            contentContainerStyle={styles.bodyContent}
+            keyboardShouldPersistTaps="handled"
+          >
+            <Text style={[type.caption, { color: colors.muted }]}>Goal type</Text>
           <View style={styles.row}>
             <Chip
               label="Strength goal"
@@ -280,7 +292,8 @@ export function GoalModal({
               />
             </>
           )}
-        </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
         <View
           style={[
             styles.footer,
@@ -307,6 +320,7 @@ export function GoalModal({
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  flex: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -314,7 +328,8 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderBottomWidth: 1,
   },
-  body: { flex: 1, padding: spacing.lg, gap: spacing.sm },
+  body: { flex: 1 },
+  bodyContent: { padding: spacing.lg, gap: spacing.sm, flexGrow: 1 },
   row: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
   chip: {
     paddingHorizontal: spacing.md,
