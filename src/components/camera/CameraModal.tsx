@@ -299,7 +299,7 @@ export function CameraModal({
           <Image
             source={{ uri: ghost.src }}
             style={styles.ghost}
-            resizeMode="contain"
+            resizeMode="cover"
           />
         )}
 
