@@ -263,6 +263,19 @@ export function BodyViewer(props: BodyViewerProps) {
 
   const info = selected ? MUSCLE_INFO[selected] : null;
 
+  // Memoize the GL surface so React state updates (selection, view toggle)
+  // never re-render or disturb the native GL view.
+  const glSurface = useMemo(() => {
+    if (!size) return null;
+    return (
+      <GestureDetector gesture={composed}>
+        <View style={styles.fill}>
+          <GLView style={styles.fill} onContextCreate={onContextCreate} />
+        </View>
+      </GestureDetector>
+    );
+  }, [size, composed, onContextCreate]);
+
   if (!BODY_3D_ENABLED || glFailed) {
     return (
       <View
@@ -279,7 +292,9 @@ export function BodyViewer(props: BodyViewerProps) {
           },
         ]}
       >
-        <Text style={[type.caption, { color: colors.muted, textAlign: 'center' }]}>
+        <Text
+          style={[type.caption, { color: colors.muted, textAlign: 'center' }]}
+        >
           3D body failed to start on this device.{'\n\n'}
           {glFailed}
         </Text>
@@ -292,79 +307,72 @@ export function BodyViewer(props: BodyViewerProps) {
       style={[styles.root, { height, backgroundColor: colors.bg }]}
       onLayout={onLayout}
     >
-      {size && (
-        <GestureDetector gesture={composed}>
-          <View style={styles.fill}>
-            <GLView style={styles.fill} onContextCreate={onContextCreate} />
-            {(props.showViewToggle ?? true) && (
-              <View style={styles.viewToggle} pointerEvents="box-none">
-                {(['front', 'back'] as const).map((v) => (
-                  <Pressable
-                    key={v}
-                    onPress={() => setView(v)}
-                    style={[
-                      styles.viewButton,
-                      {
-                        backgroundColor:
-                          view === v ? colors.accent : colors.surface,
-                        borderColor: view === v ? colors.accent : colors.line,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        type.chip,
-                        { color: view === v ? colors.bg : colors.muted },
-                      ]}
-                    >
-                      {v === 'front' ? 'Front' : 'Back'}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            )}
-            {props.mode === 'soreness' && (
-              <View style={styles.hint} pointerEvents="none">
-                <Text style={[type.caption, { color: colors.muted }]}>
-                  {SORENESS_HINT}
-                </Text>
-              </View>
-            )}
-            {info && props.mode !== 'soreness' && (
-              <View style={styles.infoWrap} pointerEvents="box-none">
-                <View
-                  style={[
-                    styles.infoCard,
-                    {
-                      backgroundColor: colors.surface,
-                      borderColor: colors.line,
-                    },
-                  ]}
-                >
-                  <View style={styles.infoHeader}>
-                    <Text style={[type.subtitle, { color: colors.accent }]}>
-                      {info.name}
-                    </Text>
-                    <Pressable
-                      onPress={() => {
-                        selectedRef.current = null;
-                        setSelected(null);
-                      }}
-                      hitSlop={12}
-                      accessibilityLabel="Close muscle info"
-                    >
-                      <Ionicons name="close" size={20} color={colors.muted} />
-                    </Pressable>
-                  </View>
-                  <Text style={type.body}>{info.desc}</Text>
-                  <Text style={[type.caption, { color: colors.muted }]}>
-                    {info.function}
-                  </Text>
-                </View>
-              </View>
-            )}
+      {glSurface}
+      {size && (props.showViewToggle ?? true) && (
+        <View style={styles.viewToggle} pointerEvents="box-none">
+          {(['front', 'back'] as const).map((v) => (
+            <Pressable
+              key={v}
+              onPress={() => setView(v)}
+              style={[
+                styles.viewButton,
+                {
+                  backgroundColor: view === v ? colors.accent : colors.surface,
+                  borderColor: view === v ? colors.accent : colors.line,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  type.chip,
+                  { color: view === v ? colors.bg : colors.muted },
+                ]}
+              >
+                {v === 'front' ? 'Front' : 'Back'}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+      {size && props.mode === 'soreness' && (
+        <View style={styles.hint} pointerEvents="none">
+          <Text style={[type.caption, { color: colors.muted }]}>
+            {SORENESS_HINT}
+          </Text>
+        </View>
+      )}
+      {size && info && props.mode !== 'soreness' && (
+        <View style={styles.infoWrap} pointerEvents="box-none">
+          <View
+            style={[
+              styles.infoCard,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.line,
+              },
+            ]}
+          >
+            <View style={styles.infoHeader}>
+              <Text style={[type.subtitle, { color: colors.accent }]}>
+                {info.name}
+              </Text>
+              <Pressable
+                onPress={() => {
+                  selectedRef.current = null;
+                  setSelected(null);
+                }}
+                hitSlop={12}
+                accessibilityLabel="Close muscle info"
+              >
+                <Ionicons name="close" size={20} color={colors.muted} />
+              </Pressable>
+            </View>
+            <Text style={type.body}>{info.desc}</Text>
+            <Text style={[type.caption, { color: colors.muted }]}>
+              {info.function}
+            </Text>
           </View>
-        </GestureDetector>
+        </View>
       )}
     </View>
   );
