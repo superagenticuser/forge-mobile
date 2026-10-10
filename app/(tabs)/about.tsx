@@ -1,0 +1,122 @@
+import { Ionicons } from '@expo/vector-icons';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { colors, radius, spacing, type } from '@/src/theme';
+
+const ported = [
+  'Exercise library: 243 exercises with search, muscle, equipment, and level filters',
+  'Exercise detail: steps, form cues, common mistakes, and easier/harder variations',
+  'Programs: all 14 training programs with per-day exercise plans',
+  'Program detail: sets x reps per exercise, deep-linked to exercise detail',
+  'FORGE dark theme shared across every screen',
+  'Over-the-air updates enabled: new JS changes arrive in about a minute, no reinstall needed',
+];
+
+const notYet = [
+  'Interactive 3D body map',
+  'Workout player (logging sets, rest timer)',
+  'Progress charts and history',
+  'Local storage and sync',
+  'Camera form checks and progress photos',
+  'Voice commands',
+  'Achievement badges',
+];
+
+const roadmap = [
+  'v0.2: workout player with set logging and rest timer',
+  'v0.3: local progress storage and charts',
+  'v0.4: 3D body map (evaluate three.js on native vs. WebView)',
+  'Later: camera, voice, achievements, sync',
+];
+
+function Section({
+  icon,
+  iconColor,
+  title,
+  items,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  iconColor: string;
+  title: string;
+  items: string[];
+}) {
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <Ionicons name={icon} size={20} color={iconColor} />
+        <Text style={type.subtitle}>{title}</Text>
+      </View>
+      {items.map((item) => (
+        <View key={item} style={styles.itemRow}>
+          <Text style={styles.bullet}>·</Text>
+          <Text style={styles.itemText}>{item}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+export default function AboutScreen() {
+  return (
+    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+      <View style={styles.hero}>
+        <Text style={type.hero}>
+          FORGE<Text style={styles.dot}>.</Text>
+        </Text>
+        <Text style={styles.tagline}>React Native experiment v0.1</Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={type.body}>
+          This is an experiment to rewrite FORGE as a native mobile app with
+          Expo and React Native. The web app (superagenticuser/gym-3d) remains
+          the production app while this experiment runs.
+        </Text>
+      </View>
+
+      <Section
+        icon="checkmark-circle"
+        iconColor={colors.volt}
+        title="Ported in v0.1"
+        items={ported}
+      />
+      <Section
+        icon="time"
+        iconColor={colors.warn}
+        title="Not yet ported"
+        items={notYet}
+      />
+      <Section
+        icon="map"
+        iconColor={colors.ember}
+        title="Roadmap"
+        items={roadmap}
+      />
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.bg },
+  content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
+  hero: { paddingTop: spacing.lg },
+  dot: { color: colors.ember },
+  tagline: { ...type.body, color: colors.muted, marginTop: spacing.xs },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  itemRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
+  bullet: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.ember,
+    lineHeight: 21,
+  },
+  itemText: { ...type.body, flex: 1 },
+});

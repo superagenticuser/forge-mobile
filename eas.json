@@ -1,0 +1,1 @@
+{"build":{"preview":{"android":{"buildType":"apk"},"channel":"preview","distribution":"internal","env":{"EAS_SKIP_AUTO_FINGERPRINT":"1"}},"production":{"android":{"buildType":"app-bundle"}}},"cli":{"appVersionSource":"local"},"submit":{"production":{}}}

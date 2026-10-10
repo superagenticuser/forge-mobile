@@ -1,16 +1,24 @@
 {
   "expo": {
-    "name": "forge-mobile",
+    "name": "FORGE",
     "slug": "forge-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
+    "owner": "superagenticuser",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/d656233f-ce3b-46bf-adc2-6db843f48815"
+    },
     "icon": "./assets/images/icon.png",
     "scheme": "forgemobile",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true
     },
     "android": {
+      "package": "com.superagenticuser.forge",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -24,6 +32,11 @@
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
+    "extra": {
+      "eas": {
+        "projectId": "d656233f-ce3b-46bf-adc2-6db843f48815"
+      }
+    },
     "plugins": [
       "expo-router",
       [
@@ -31,9 +44,28 @@
         {
           "image": "./assets/images/splash-icon.png",
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#0b0d12"
         }
-      ]
+      ],
+      "expo-sqlite",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "FORGE needs camera access to record your form and take progress photos.",
+          "microphonePermission": "FORGE needs microphone access to record video with sound."
+        }
+      ],
+      "expo-video",
+      "expo-sharing",
+      "expo-audio",
+      [
+        "@react-native-voice/voice",
+        {
+          "microphonePermission": "FORGE needs microphone access for voice commands and voice logging.",
+          "speechRecognitionPermission": "FORGE needs speech recognition for voice commands and voice logging."
+        }
+      ],
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true
