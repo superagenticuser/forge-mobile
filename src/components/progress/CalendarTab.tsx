@@ -19,20 +19,6 @@ import { radius, spacing } from '@/src/theme';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-function intensityColor(
-  count: number,
-  colors: { accent: string; line: string }
-) {
-  if (!count) return colors.line;
-  const a = count === 1 ? 0.35 : count === 2 ? 0.55 : count <= 4 ? 0.8 : 1;
-  return (
-    colors.accent +
-    Math.round(a * 255)
-      .toString(16)
-      .padStart(2, '0')
-  );
-}
-
 export function CalendarTab({
   logs,
   nameOf,
@@ -118,8 +104,14 @@ export function CalendarTab({
             {wd}
           </Text>
         ))}
-        {cells.map((cell, i) =>
-          cell ? (
+        {cells.map((cell, i) => {
+          if (!cell) {
+            return <View key={`b${i}`} style={styles.day} />;
+          }
+          const count = counts[cell.key] || 0;
+          const isSelected = selected === cell.key;
+          const isToday = cell.key === todayKey;
+          return (
             <Pressable
               key={cell.key}
               onPress={() =>
@@ -128,32 +120,46 @@ export function CalendarTab({
               style={[
                 styles.day,
                 {
-                  backgroundColor: intensityColor(
-                    counts[cell.key] || 0,
-                    colors
-                  ),
-                  borderColor:
-                    selected === cell.key ? colors.accent : 'transparent',
+                  backgroundColor: isSelected
+                    ? colors.accent
+                    : isToday
+                      ? colors.surface
+                      : 'transparent',
+                  borderColor: isToday && !isSelected ? colors.accent : 'transparent',
                 },
               ]}
-              accessibilityLabel={`${longDateLabel(cell.key)}${counts[cell.key] ? `, ${counts[cell.key]} workouts` : ', rest day'}`}
+              accessibilityLabel={`${longDateLabel(cell.key)}${count ? `, ${count} workouts` : ', rest day'}`}
             >
               <Text
                 style={[
-                  type.caption,
+                  type.body,
                   {
-                    color: cell.key === todayKey ? colors.accent : colors.ink,
-                    fontWeight: cell.key === todayKey ? '800' : '400',
+                    color: isSelected
+                      ? colors.bg
+                      : isToday
+                        ? colors.accent
+                        : colors.ink,
+                    fontWeight: isToday || isSelected ? '700' : '400',
                   },
                 ]}
               >
                 {cell.day}
               </Text>
+              {count > 0 && (
+                <View
+                  style={[
+                    styles.dot,
+                    {
+                      backgroundColor: isSelected
+                        ? colors.bg
+                        : colors.accent,
+                    },
+                  ]}
+                />
+              )}
             </Pressable>
-          ) : (
-            <View key={`b${i}`} style={styles.day} />
-          )
-        )}
+          );
+        })}
       </View>
 
       {selected &&
@@ -163,7 +169,7 @@ export function CalendarTab({
               {longDateLabel(selected)}
             </Text>
             {dayLogs.map((w, wi) => {
-              const sets = w.exercises.reduce((a, x) => a + x.sets.length, 0);
+              const vol = sessionVolumeKg(w);
               return (
                 <View
                   key={wi}
@@ -175,34 +181,40 @@ export function CalendarTab({
                     },
                   ]}
                 >
-                  <Text
-                    style={[
-                      type.body,
-                      { color: colors.ink, fontWeight: '700' },
-                    ]}
-                  >
-                    {w.programName || 'Free workout'}
-                    {w.dayName ? (
-                      <Text style={{ color: colors.muted, fontWeight: '400' }}>
-                        {'  -  '}
-                        {w.dayName}
-                      </Text>
-                    ) : null}
-                  </Text>
-                  <Text style={[type.caption, { color: colors.muted }]}>
-                    {sets} sets - {fmtWeight(sessionVolumeKg(w), units)}
-                    {w.durationMin ? ` - ${w.durationMin} min` : ''}
-                  </Text>
+                  <View style={styles.woHeader}>
+                    <Text
+                      style={[
+                        type.body,
+                        { color: colors.ink, fontWeight: '700', flex: 1 },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {w.programName || 'Free workout'}
+                    </Text>
+                    <Text style={[type.caption, { color: colors.accent }]}>
+                      {fmtWeight(vol, units)}
+                    </Text>
+                  </View>
+                  {w.dayName ? (
+                    <Text style={[type.caption, { color: colors.muted }]}>
+                      {w.dayName}
+                      {w.durationMin ? `  -  ${w.durationMin} min` : ''}
+                    </Text>
+                  ) : null}
                   {w.exercises.map((x, xi) => (
                     <Text
                       key={xi}
                       style={[type.caption, { color: colors.muted }]}
+                      numberOfLines={2}
                     >
-                      {nameOf(x.id) || x.id} -{' '}
+                      <Text style={{ color: colors.ink, fontWeight: '600' }}>
+                        {nameOf(x.id) || x.id}
+                      </Text>
+                      {'  -  '}
                       {x.sets
                         .map(
                           (s) =>
-                            `${s.reps}${s.weight ? ' x ' + fmtWeight(s.weight, units) : ''}${s.rpe ? ` @ RPE ${s.rpe}` : ''}${s.failed ? ' (failed)' : ''}`
+                            `${s.reps}${s.weight ? ' x ' + fmtWeight(s.weight, units) : ''}`
                         )
                         .join(', ')}
                     </Text>
@@ -237,13 +249,25 @@ const styles = StyleSheet.create({
   wd: { width: '14.28%', textAlign: 'center', paddingVertical: spacing.xs },
   day: {
     width: '14.28%',
-    aspectRatio: 1,
+    height: 44,
     borderRadius: radius.md,
-    borderWidth: 2,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 2,
+    marginVertical: 1,
+  },
+  dot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    marginTop: 2,
   },
   detail: { gap: spacing.sm },
-  wo: { borderWidth: 1, borderRadius: radius.lg, padding: spacing.md, gap: 2 },
+  wo: { borderWidth: 1, borderRadius: radius.lg, padding: spacing.md, gap: 4 },
+  woHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
 });
