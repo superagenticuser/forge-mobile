@@ -14,8 +14,16 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { fmtDuration, fmtWeight } from '@/src/lib/training';
+import {
+  badgeContext,
+  checkBadges,
+  getNewBadges,
+  type BadgeDef,
+} from '@/src/lib/badges';
 import { useTheme } from '@/src/storage/settings';
-import { useWorkout } from '@/src/storage/workout';
+import { useLibrary } from '@/src/storage/library';
+import { loadWorkoutLogs, useWorkout } from '@/src/storage/workout';
+import { BadgeCelebration } from '@/src/components/progress/BadgeCelebration';
 import { radius, spacing } from '@/src/theme';
 
 function StatCard({ value, label }: { value: string; label: string }) {
@@ -38,8 +46,12 @@ export default function WorkoutSummaryScreen() {
   const theme = useTheme();
   const { colors, type, settings } = theme;
   const { lastSummary, saveWorkout, clearSummary } = useWorkout();
+  const { byId } = useLibrary();
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [newBadges, setNewBadges] = useState<
+    Array<BadgeDef & { earnedAt: number }>
+  >([]);
 
   if (!lastSummary) {
     return (
@@ -66,10 +78,27 @@ export default function WorkoutSummaryScreen() {
     setSaving(true);
     try {
       await saveWorkout(notes);
+      // Award badges like the web app (js/workout.js finish handler):
+      // evaluate, then celebrate any newly earned ones before leaving.
+      const fresh = await loadWorkoutLogs();
+      await checkBadges(
+        fresh,
+        badgeContext(fresh, (id) => byId.get(id)?.name ?? null)
+      );
+      const unseen = await getNewBadges();
+      if (unseen.length) {
+        setNewBadges(unseen);
+        return;
+      }
       router.replace('/(tabs)');
     } finally {
       setSaving(false);
     }
+  };
+
+  const closeCelebration = () => {
+    setNewBadges([]);
+    router.replace('/(tabs)');
   };
 
   const onDiscard = () => {
@@ -183,6 +212,7 @@ export default function WorkoutSummaryScreen() {
           </Text>
         </Pressable>
       </View>
+      <BadgeCelebration badges={newBadges} onClose={closeCelebration} />
     </SafeAreaView>
   );
 }

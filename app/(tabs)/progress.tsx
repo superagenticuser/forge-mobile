@@ -1,4 +1,5 @@
-// Progress tab: overview, history, records, volume, calendar, body.
+// Progress tab: overview, history, records, volume, calendar, body,
+// goals, badges, insights, standards, year, challenges, coach, export.
 // Ports the web app's Progress view (js/progress.js renderProgress).
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -8,12 +9,27 @@ import { useTheme } from '@/src/storage/settings';
 import { useLibrary } from '@/src/storage/library';
 import { kvGet, kvSet } from '@/src/storage/db';
 import { useWorkoutLogs, groupOfMuscle } from '@/src/lib/progress';
+import {
+  badgeContext,
+  checkBadges,
+  getNewBadges,
+  type BadgeDef,
+} from '@/src/lib/badges';
 import { OverviewTab } from '@/src/components/progress/OverviewTab';
 import { HistoryTab } from '@/src/components/progress/HistoryTab';
 import { RecordsTab } from '@/src/components/progress/RecordsTab';
 import { VolumeTab } from '@/src/components/progress/VolumeTab';
 import { CalendarTab } from '@/src/components/progress/CalendarTab';
 import { BodyTab } from '@/src/components/progress/BodyTab';
+import { GoalsTab } from '@/src/components/progress/GoalsTab';
+import { BadgesTab } from '@/src/components/progress/BadgesTab';
+import { BadgeCelebration } from '@/src/components/progress/BadgeCelebration';
+import { InsightsTab } from '@/src/components/progress/InsightsTab';
+import { StandardsTab } from '@/src/components/progress/StandardsTab';
+import { YearTab } from '@/src/components/progress/YearTab';
+import { ChallengesTab } from '@/src/components/progress/ChallengesTab';
+import { CoachTab } from '@/src/components/progress/CoachTab';
+import { ExportTab } from '@/src/components/progress/ExportTab';
 import { spacing } from '@/src/theme';
 
 const TABS = [
@@ -23,6 +39,14 @@ const TABS = [
   { id: 'volume', label: 'Volume' },
   { id: 'calendar', label: 'Calendar' },
   { id: 'body', label: 'Body' },
+  { id: 'goals', label: 'Goals' },
+  { id: 'badges', label: 'Badges' },
+  { id: 'insights', label: 'Insights' },
+  { id: 'standards', label: 'Standards' },
+  { id: 'year', label: 'Year' },
+  { id: 'challenges', label: 'Challenges' },
+  { id: 'coach', label: 'Coach' },
+  { id: 'export', label: 'Export' },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -31,8 +55,11 @@ export default function ProgressScreen() {
   const theme = useTheme();
   const { colors, type } = theme;
   const { ready, logs, refresh } = useWorkoutLogs();
-  const { byId } = useLibrary();
+  const { byId, exercises } = useLibrary();
   const [tab, setTab] = useState<TabId>('overview');
+  const [celebration, setCelebration] = useState<
+    Array<BadgeDef & { earnedAt: number }>
+  >([]);
 
   // Remember the sub-tab like the web app (forge-progress-tab).
   useEffect(() => {
@@ -45,13 +72,6 @@ export default function ProgressScreen() {
     setTab(t);
     kvSet('progress-tab', t);
   }, []);
-
-  // Re-read logs whenever the tab regains focus (e.g. after a workout).
-  useFocusEffect(
-    useCallback(() => {
-      refresh();
-    }, [refresh])
-  );
 
   const nameOf = useCallback(
     (id: string) => byId.get(id)?.name ?? null,
@@ -71,6 +91,46 @@ export default function ProgressScreen() {
     },
     [byId]
   );
+  const getExercise = useCallback(
+    (id: string) => {
+      const ex = byId.get(id);
+      return ex ? { name: ex.name, primary: ex.primary } : undefined;
+    },
+    [byId]
+  );
+  const resolveLiftId = useCallback(
+    (lift: { id: string; name: string }) => {
+      const direct = byId.get(lift.id);
+      if (direct) return direct.id;
+      const part = lift.name.toLowerCase().split(' ')[0];
+      const found = exercises.find((e) => e.name.toLowerCase().includes(part));
+      return found ? found.id : null;
+    },
+    [byId, exercises]
+  );
+
+  // Re-read logs whenever the tab regains focus (e.g. after a workout),
+  // then evaluate badges and celebrate newly earned ones.
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      (async () => {
+        await refresh();
+        const { loadWorkoutLogs } = await import('@/src/storage/workout');
+        const fresh = await loadWorkoutLogs();
+        if (cancelled) return;
+        await checkBadges(
+          fresh,
+          badgeContext(fresh, (id) => byId.get(id)?.name ?? null)
+        );
+        const unseen = await getNewBadges();
+        if (!cancelled && unseen.length) setCelebration(unseen);
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [refresh, byId])
+  );
 
   const body = useMemo(() => {
     if (!ready) return null;
@@ -85,11 +145,43 @@ export default function ProgressScreen() {
         return <CalendarTab logs={logs} nameOf={nameOf} />;
       case 'body':
         return <BodyTab />;
+      case 'goals':
+        return <GoalsTab logs={logs} nameOf={nameOf} />;
+      case 'badges':
+        return <BadgesTab />;
+      case 'insights':
+        return (
+          <InsightsTab
+            logs={logs}
+            nameOf={nameOf}
+            primaryOf={primaryOf}
+            getExercise={getExercise}
+          />
+        );
+      case 'standards':
+        return <StandardsTab logs={logs} resolveLiftId={resolveLiftId} />;
+      case 'year':
+        return <YearTab logs={logs} nameOf={nameOf} primaryOf={primaryOf} />;
+      case 'challenges':
+        return <ChallengesTab logs={logs} />;
+      case 'coach':
+        return <CoachTab logs={logs} nameOf={nameOf} primaryOf={primaryOf} />;
+      case 'export':
+        return <ExportTab logs={logs} nameOf={nameOf} />;
       case 'overview':
       default:
         return <OverviewTab logs={logs} nameOf={nameOf} />;
     }
-  }, [ready, tab, logs, nameOf, primaryOf, musclesOf]);
+  }, [
+    ready,
+    tab,
+    logs,
+    nameOf,
+    primaryOf,
+    musclesOf,
+    getExercise,
+    resolveLiftId,
+  ]);
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
@@ -133,6 +225,10 @@ export default function ProgressScreen() {
       >
         {body}
       </ScrollView>
+      <BadgeCelebration
+        badges={celebration}
+        onClose={() => setCelebration([])}
+      />
     </View>
   );
 }
