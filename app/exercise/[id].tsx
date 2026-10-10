@@ -1,18 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/src/components/ConfirmDialog';
 import { BodyViewer } from '@/src/components/BodyViewer';
 import { PyramidModal } from '@/src/components/PyramidModal';
+import { CameraModal } from '@/src/components/camera/CameraModal';
+import { ClipLibraryModal } from '@/src/components/camera/ClipLibraryModal';
 import WarmupSection from '@/src/components/WarmupSection';
 import { muscleLabel, prettify } from '@/src/format';
 import { fmtWeight } from '@/src/lib/training';
 import { useLibrary } from '@/src/storage/library';
 import { useTheme } from '@/src/storage/settings';
 import { useExerciseHistory, useWorkout } from '@/src/storage/workout';
+import { getClipsByExercise } from '@/src/storage/db';
 import { radius, spacing } from '@/src/theme';
 
 function Badge({ label }: { label: string }) {
@@ -87,9 +90,23 @@ export default function ExerciseDetailScreen() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [starting, setStarting] = useState(false);
   const [pyramidOpen, setPyramidOpen] = useState(false);
+  const [recorderOpen, setRecorderOpen] = useState(false);
+  const [clipsOpen, setClipsOpen] = useState(false);
+  const [clipCount, setClipCount] = useState(0);
 
   const exercise = byId.get(id ?? '');
   const history = useExerciseHistory(exercise?.id ?? '');
+
+  const refreshClipCount = useCallback(() => {
+    if (!exercise) return;
+    getClipsByExercise(exercise.id)
+      .then((clips) => setClipCount(clips.length))
+      .catch(() => setClipCount(0));
+  }, [exercise]);
+
+  useEffect(() => {
+    refreshClipCount();
+  }, [refreshClipCount]);
 
   const similar = useMemo(() => {
     if (!exercise) return [];
@@ -261,6 +278,54 @@ export default function ExerciseDetailScreen() {
           Pyramid builder
         </Text>
       </Pressable>
+
+      <View style={styles.cameraRow}>
+        <Pressable
+          style={[
+            styles.cameraButton,
+            { borderColor: colors.line, borderWidth: 1 },
+          ]}
+          onPress={() => setRecorderOpen(true)}
+          accessibilityLabel={`Record a form clip for ${exercise.name}`}
+        >
+          <Ionicons name="videocam-outline" size={18} color={colors.accent} />
+          <Text style={[type.chip, { color: colors.accent }]}>Record form</Text>
+        </Pressable>
+        <Pressable
+          style={[
+            styles.cameraButton,
+            { borderColor: colors.line, borderWidth: 1 },
+          ]}
+          onPress={() => setClipsOpen(true)}
+          accessibilityLabel={`View form clips for ${exercise.name}`}
+        >
+          <Ionicons name="film-outline" size={18} color={colors.accent} />
+          <Text style={[type.chip, { color: colors.accent }]}>
+            Clips{clipCount > 0 ? ` (${clipCount})` : ''}
+          </Text>
+        </Pressable>
+      </View>
+
+      <CameraModal
+        visible={recorderOpen}
+        mode="recorder"
+        title={exercise.name}
+        exId={exercise.id}
+        exName={exercise.name}
+        onClose={() => {
+          setRecorderOpen(false);
+          refreshClipCount();
+        }}
+      />
+      <ClipLibraryModal
+        visible={clipsOpen}
+        exId={exercise.id}
+        exName={exercise.name}
+        onClose={() => {
+          setClipsOpen(false);
+          refreshClipCount();
+        }}
+      />
 
       {exercise.equipment !== 'bodyweight' && (
         <Section title="Warm-up sets">
@@ -485,6 +550,16 @@ const styles = StyleSheet.create({
   oneRmRow: { gap: 2 },
   oneRmValue: { fontSize: 26, fontWeight: '800' },
   startWorkoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    borderRadius: radius.pill,
+    paddingVertical: spacing.md,
+  },
+  cameraRow: { flexDirection: 'row', gap: spacing.sm },
+  cameraButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

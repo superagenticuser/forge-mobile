@@ -1,6 +1,5 @@
-// Progress > Body: measurement logging with weight trend chart.
-// Ports the web app's body tab (js/progress.js renderBodyTab); progress
-// photos are deferred to v0.13 (camera).
+// Progress > Body: measurement logging with weight trend chart and progress
+// photos (v0.13 camera).
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +13,7 @@ import {
 } from '@/src/lib/progress';
 import { LineChart } from '@/src/components/progress/LineChart';
 import { Muted, SectionTitle } from '@/src/components/progress/ui';
+import { PhotosSection } from '@/src/components/progress/PhotosSection';
 import { radius, spacing } from '@/src/theme';
 
 export function BodyTab() {
@@ -169,19 +169,7 @@ export function BodyTab() {
         <Muted>Log your weight twice to see a trend.</Muted>
       )}
 
-      <SectionTitle>Progress photos</SectionTitle>
-      <View
-        style={[
-          styles.photos,
-          { backgroundColor: colors.surface, borderColor: colors.line },
-        ]}
-      >
-        <Ionicons name="camera-outline" size={24} color={colors.muted} />
-        <Text style={[type.body, { color: colors.muted }]}>
-          Progress photos arrive with the camera phase. Your measurements above
-          are saved and ready.
-        </Text>
-      </View>
+      <PhotosSection />
     </View>
   );
 }
@@ -207,12 +195,5 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.md,
     gap: 4,
-  },
-  photos: {
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    gap: spacing.sm,
-    alignItems: 'center',
   },
 });

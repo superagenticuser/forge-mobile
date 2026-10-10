@@ -21,6 +21,7 @@ import { ConfirmDialog } from '@/src/components/ConfirmDialog';
 import { ExercisePickerModal } from '@/src/components/ExercisePickerModal';
 import { PlateCalculatorModal } from '@/src/components/PlateCalculatorModal';
 import { SetTypeModal } from '@/src/components/SetTypeModal';
+import { CameraModal } from '@/src/components/camera/CameraModal';
 import { warmupSets } from '@/src/components/WarmupSection';
 import {
   fmtDuration,
@@ -438,6 +439,7 @@ function ExerciseCard({
     swapExercise,
     setExerciseNote,
     addSet,
+    updateSet,
     setSetType,
     addDropSet,
     toggleLink,
@@ -448,6 +450,7 @@ function ExerciseCard({
   const [showGuide, setShowGuide] = useState(false);
   const [showTempo, setShowTempo] = useState(false);
   const [platesOpen, setPlatesOpen] = useState(false);
+  const [recorderOpen, setRecorderOpen] = useState(false);
 
   const ex = byId.get(exercise.exerciseId);
   const doneCount = exercise.sets.filter((s) => s.done).length;
@@ -650,6 +653,18 @@ function ExerciseCard({
           {showGuide && <FormGuidePanel exerciseId={exercise.exerciseId} />}
           {showTempo && <TempoPanel exerciseId={exercise.exerciseId} />}
 
+          <Pressable
+            style={styles.actionButton}
+            onPress={() => setRecorderOpen(true)}
+            hitSlop={8}
+            accessibilityLabel="Record a form clip"
+          >
+            <Ionicons name="videocam-outline" size={18} color={colors.muted} />
+            <Text style={[styles.actionLabel, { color: colors.muted }]}>
+              Record
+            </Text>
+          </Pressable>
+
           <View style={styles.setHeader}>
             <View style={styles.doneCol} />
             <Text style={[styles.setNum, styles.headerText]}> </Text>
@@ -794,7 +809,106 @@ function ExerciseCard({
           swapExercise(exercise.key, id);
         }}
       />
+      <CameraModal
+        visible={recorderOpen}
+        mode="recorder"
+        title={ex ? ex.name : exercise.exerciseId}
+        exId={exercise.exerciseId}
+        exName={ex ? ex.name : exercise.exerciseId}
+        onClose={() => setRecorderOpen(false)}
+        onClipSaved={(reps) => {
+          // If reps were counted, pre-fill the next unfinished set's reps.
+          if (reps > 0) {
+            const next = exercise.sets.find((s) => !s.done && !s.parentKey);
+            if (next && !next.reps) {
+              updateSet(exercise.key, next.key, { reps: String(reps) });
+            }
+          }
+        }}
+      />
     </View>
+  );
+}
+
+/** Mirror mode: front-camera preview with a workout HUD overlay. */
+function MirrorModal({
+  visible,
+  onClose,
+}: {
+  visible: boolean;
+  onClose: () => void;
+}) {
+  const { colors, type } = useTheme();
+  const { workout, toggleSetDone, rest } = useWorkout();
+  const { byId } = useLibrary();
+
+  // Find the first exercise with an unfinished set.
+  let hudEx: {
+    name: string;
+    setNum: number;
+    setTotal: number;
+    reps: string;
+  } | null = null;
+  let doneTarget: { exKey: string; setKey: string } | null = null;
+  if (workout) {
+    for (const e of workout.exercises) {
+      const topSets = e.sets.filter((s) => !s.parentKey);
+      const done = topSets.filter((s) => s.done).length;
+      if (done < topSets.length) {
+        const ex = byId.get(e.exerciseId);
+        const next = topSets[done];
+        hudEx = {
+          name: ex ? ex.name : e.exerciseId,
+          setNum: done + 1,
+          setTotal: topSets.length,
+          reps: next.reps || '?',
+        };
+        doneTarget = { exKey: e.key, setKey: next.key };
+        break;
+      }
+    }
+  }
+
+  const hud = (
+    <View style={{ gap: 2 }}>
+      {hudEx ? (
+        <>
+          <Text style={[type.subtitle, { color: '#fff' }]}>{hudEx.name}</Text>
+          <Text style={[type.body, { color: 'rgba(255,255,255,0.85)' }]}>
+            Set {hudEx.setNum} of {hudEx.setTotal} · {hudEx.reps} reps
+          </Text>
+        </>
+      ) : (
+        <>
+          <Text style={[type.subtitle, { color: '#fff' }]}>
+            Workout complete
+          </Text>
+          <Text style={[type.body, { color: 'rgba(255,255,255,0.85)' }]}>
+            Nice work.
+          </Text>
+        </>
+      )}
+      {rest && rest.left > 0 && (
+        <Text style={[type.chip, { color: colors.accent }]}>
+          Rest {fmtDuration(rest.left)}
+        </Text>
+      )}
+    </View>
+  );
+
+  return (
+    <CameraModal
+      visible={visible}
+      mode="mirror"
+      title={workout?.programName || workout?.dayName || 'Workout'}
+      onClose={onClose}
+      hud={hud}
+      onMirrorSetDone={
+        doneTarget
+          ? () => toggleSetDone(doneTarget.exKey, doneTarget.setKey)
+          : undefined
+      }
+    />
   );
 }
 
@@ -875,6 +989,7 @@ export default function WorkoutScreen() {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [mirrorOpen, setMirrorOpen] = useState(false);
 
   // Tick the elapsed timer off startedAt only, so typing in set inputs
   // does not recreate the interval.
@@ -932,10 +1047,27 @@ export default function WorkoutScreen() {
         }}
       />
 
-      <View style={styles.subHeader}>
-        <Text style={[type.caption, { color: colors.muted }]} numberOfLines={1}>
+      <View
+        style={[
+          styles.subHeader,
+          { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+        ]}
+      >
+        <Text
+          style={[type.caption, { color: colors.muted, flex: 1 }]}
+          numberOfLines={1}
+        >
           {subtitle}
         </Text>
+        <Pressable
+          style={[styles.mirrorBtn, { borderColor: colors.line }]}
+          onPress={() => setMirrorOpen(true)}
+          hitSlop={8}
+          accessibilityLabel="Open mirror mode"
+        >
+          <Ionicons name="person-outline" size={16} color={colors.accent} />
+          <Text style={[type.chip, { color: colors.accent }]}>Mirror</Text>
+        </Pressable>
       </View>
 
       {notice && (
@@ -1035,6 +1167,7 @@ export default function WorkoutScreen() {
           addExercise(id);
         }}
       />
+      <MirrorModal visible={mirrorOpen} onClose={() => setMirrorOpen(false)} />
     </SafeAreaView>
   );
 }
@@ -1042,6 +1175,15 @@ export default function WorkoutScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   subHeader: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xs },
+  mirrorBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderRadius: radius.pill,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
   notice: {
     flexDirection: 'row',
     alignItems: 'center',
