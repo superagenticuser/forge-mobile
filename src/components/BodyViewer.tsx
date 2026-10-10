@@ -110,6 +110,11 @@ export function BodyViewer(props: BodyViewerProps) {
       const t = themeRef.current;
       const p = propsRef.current;
       try {
+        // Dispose any existing scene before creating a new one. Without this,
+        // remounts leak the old renderer, geometries, materials, and RAF loop,
+        // causing progressive slowdown and eventual crash.
+        sceneRef.current?.dispose();
+        sceneRef.current = null;
         const scene = new BodyScene(gl, {
           width: size.w,
           height: size.h,

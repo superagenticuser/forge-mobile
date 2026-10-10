@@ -852,8 +852,14 @@ export class BodyScene {
       if (mesh.isMesh) {
         mesh.geometry.dispose();
         const mat = mesh.material as THREE.Material | THREE.Material[];
-        if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
-        else mat.dispose();
+        const disposeMat = (m: THREE.Material) => {
+          // Dispose any textures (e.g., blob shadow map) to prevent GPU leaks.
+          const mm = m as THREE.MeshBasicMaterial;
+          if (mm.map) mm.map.dispose();
+          m.dispose();
+        };
+        if (Array.isArray(mat)) mat.forEach(disposeMat);
+        else disposeMat(mat);
       }
     });
     this.renderer.dispose();
