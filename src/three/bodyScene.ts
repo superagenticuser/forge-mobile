@@ -670,7 +670,8 @@ export class BodyScene {
 
   setFinish(name: BodyFinish): void {
     const f = FINISHES[name] || FINISHES.standard;
-    const apply = (m: THREE.MeshStandardMaterial) => {
+    const apply = (m: THREE.MeshStandardMaterial | undefined | null) => {
+      if (!m) return;
       m.color.setHex(f.base);
       m.roughness = f.roughness;
       m.metalness = f.metalness;
@@ -679,13 +680,17 @@ export class BodyScene {
       m.needsUpdate = true;
     };
     apply(this.baseMat);
-    this.neutralMat.color.setHex(f.neutral);
-    this.neutralMat.roughness = f.roughness;
-    this.neutralMat.metalness = f.metalness;
-    this.neutralMat.opacity = f.opacity;
-    this.neutralMat.transparent = f.opacity < 1;
-    this.neutralMat.needsUpdate = true;
-    for (const id in this.mats) apply(this.mats[id]);
+    if (this.neutralMat) {
+      this.neutralMat.color.setHex(f.neutral);
+      this.neutralMat.roughness = f.roughness;
+      this.neutralMat.metalness = f.metalness;
+      this.neutralMat.opacity = f.opacity;
+      this.neutralMat.transparent = f.opacity < 1;
+      this.neutralMat.needsUpdate = true;
+    }
+    if (this.mats) {
+      for (const id in this.mats) apply(this.mats[id]);
+    }
   }
 
   setAccent(hex: string): void {
