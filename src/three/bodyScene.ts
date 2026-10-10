@@ -762,13 +762,15 @@ export class BodyScene {
   private fitCameraToView(): void {
     const vFov = (this.camera.fov * Math.PI) / 180;
     const aspect = this.width / this.height;
-    // Body approx: 1.7 wide. Fill 95% of the view width.
-    const bodyW = 1.7;
+    // Body approx: 3.5 tall, 1.7 wide. Fit height with margin, like the web app.
+    const bodyH = 3.5;
+    const distH = bodyH / 0.88 / (2 * Math.tan(vFov / 2));
     const hFov = 2 * Math.atan(Math.tan(vFov / 2) * aspect);
-    const distW = bodyW / 0.95 / (2 * Math.tan(hFov / 2));
-    // Don't get closer than 2.8 to avoid extreme cropping.
-    this.camDist = Math.max(distW, 2.8);
-    this.camera.position.z = this.camDist;
+    const bodyW = 1.7;
+    const distW = bodyW / 0.88 / (2 * Math.tan(hFov / 2));
+    this.camDist = Math.max(distH, distW);
+    this.camera.position.set(0, 2.05, this.camDist);
+    this.camera.lookAt(0, 1.85, 0);
   }
 
   setActive(active: boolean): void {
