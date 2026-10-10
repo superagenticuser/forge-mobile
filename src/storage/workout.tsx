@@ -267,7 +267,8 @@ export function lastWeightKg(exId: string, logs: WorkoutLog[]): number | null {
   return null;
 }
 
-async function loadWorkoutLogs(): Promise<WorkoutLog[]> {
+/** All completed workout logs, oldest first (same order as the web app's log array). */
+export async function loadWorkoutLogs(): Promise<WorkoutLog[]> {
   const rows = await getLogs();
   const out: WorkoutLog[] = [];
   for (const r of rows) {
