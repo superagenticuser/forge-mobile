@@ -151,17 +151,19 @@ export function CompareModal({
                   resizeMode="cover"
                 />
                 <Animated.View style={[styles.sliderTop, topStyle]}>
-                  <Image
-                    source={{ uri: a.src }}
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: sliderW || '100%',
-                      height: '100%',
-                    }}
-                    resizeMode="cover"
-                  />
+                  {sliderW > 0 && (
+                    <Image
+                      source={{ uri: a.src }}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: sliderW,
+                        height: '100%',
+                      }}
+                      resizeMode="cover"
+                    />
+                  )}
                 </Animated.View>
                 <GestureDetector gesture={pan}>
                   <Animated.View style={[styles.handle, handleStyle]}>
@@ -247,7 +249,10 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   sliderTop: {
-    ...StyleSheet.absoluteFill,
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
     overflow: 'hidden',
   },
   handle: {
