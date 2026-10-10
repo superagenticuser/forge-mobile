@@ -106,7 +106,7 @@ export function CalendarTab({
         ))}
         {cells.map((cell, i) => {
           if (!cell) {
-            return <View key={`b${i}`} style={styles.day} />;
+            return <View key={`b${i}`} style={styles.dayBlank} />;
           }
           const count = counts[cell.key] || 0;
           const isSelected = selected === cell.key;
@@ -254,6 +254,11 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
+    marginVertical: 1,
+  },
+  dayBlank: {
+    width: '14.28%',
+    height: 44,
     marginVertical: 1,
   },
   dot: {

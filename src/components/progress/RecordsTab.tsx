@@ -156,7 +156,7 @@ export function RecordsTab({
       )}
 
       {volGroups.length > 0 && (
-        <View>
+        <View style={styles.volList}>
           <SectionTitle>Volume records</SectionTitle>
           <Muted>
             Best single-day and single-week volume per muscle group.
@@ -172,7 +172,11 @@ export function RecordsTab({
                   { backgroundColor: colors.surface, borderColor: colors.line },
                 ]}
               >
-                <Text style={[type.body, { color: colors.ink, flex: 1 }]}>
+                <Text
+                  style={[type.body, { color: colors.ink }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit={false}
+                >
                   {MUSCLE_GROUPS[groupOfMuscle(g)] || g}
                 </Text>
                 <Text
@@ -248,23 +252,25 @@ export function RecordsTab({
               />
             ))}
           </ScrollView>
-          {feed.map((e, i) => (
-            <View
-              key={i}
-              style={[
-                styles.row,
-                { backgroundColor: colors.surface, borderColor: colors.line },
-              ]}
-            >
-              <Ionicons name="trophy" size={18} color={colors.accent} />
-              <View style={styles.feedText}>
-                <Text style={[type.body, { color: colors.ink }]}>
-                  {e.name} - {fmtWeight(e.weight, units)} x {e.reps}
-                </Text>
-                <Muted>{shortDateLabel(e.date)}</Muted>
+          <View style={styles.prFeed}>
+            {feed.map((e, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.row,
+                  { backgroundColor: colors.surface, borderColor: colors.line },
+                ]}
+              >
+                <Ionicons name="trophy" size={18} color={colors.accent} />
+                <View style={styles.feedText}>
+                  <Text style={[type.body, { color: colors.ink }]}>
+                    {e.name} - {fmtWeight(e.weight, units)} x {e.reps}
+                  </Text>
+                  <Muted>{shortDateLabel(e.date)}</Muted>
+                </View>
               </View>
-            </View>
-          ))}
+            ))}
+          </View>
         </View>
       ) : (
         <Muted>No PR history yet.</Muted>
@@ -292,4 +298,6 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   feedText: { flex: 1, gap: 2 },
+  volList: { gap: spacing.sm },
+  prFeed: { gap: spacing.sm, marginTop: spacing.sm },
 });
