@@ -776,9 +776,9 @@ export class BodyScene {
   /** Adjust camera distance so the body fills the view width nicely. */
   private fitCameraToView(): void {
     if (this.width <= 0 || this.height <= 0) return;
-    // Full-bleed container on Home. Distance 4.3 gives the body breathing
-    // room without feeling zoomed in.
-    this.camDist = 4.3;
+    // Full-bleed container on Home. Distance 5.0 shows the whole body
+    // with comfortable breathing room.
+    this.camDist = 5.0;
     this.camera.position.set(0, 2.05, this.camDist);
     this.camera.lookAt(0, 1.85, 0);
   }
