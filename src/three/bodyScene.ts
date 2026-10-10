@@ -138,7 +138,7 @@ export class BodyScene {
     this.accentHex = opts.accentHex;
     this.autoRotate = opts.autoRotate;
     this.reduceMotion = opts.reduceMotion;
-    this.camDist = 5.9;
+    this.camDist = 4.6;
 
     // three.js needs a canvas-like object; expo-gl supplies the real context.
     const canvas = {
