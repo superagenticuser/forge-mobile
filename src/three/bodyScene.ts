@@ -125,13 +125,6 @@ export class BodyScene {
   private camDist: number;
   private pinchStartDist = 0;
   private lastAct = Date.now();
-  private lastTap: {
-    x: number;
-    y: number;
-    ndcX: number;
-    ndcY: number;
-    hit: string | null;
-  } | null = null;
   private interacting = false;
   // Physical pixels per layout point of the expo-gl drawing buffer, captured
   // at context creation. The GL viewport must cover the whole buffer.
@@ -759,41 +752,7 @@ export class BodyScene {
     this.raycaster.setFromCamera(ndc, this.camera);
     const hit = this.raycaster.intersectObjects(this.muscleMeshes, false)[0];
     this.lastAct = Date.now();
-    this.lastTap = {
-      x,
-      y,
-      ndcX: ndc.x,
-      ndcY: ndc.y,
-      hit: hit ? (hit.object.userData.muscle as string) : null,
-    };
     return hit ? (hit.object.userData.muscle as string) : null;
-  }
-
-  /** Debug info for diagnosing framing and tap issues. */
-  getDebugInfo(): {
-    camDist: number;
-    width: number;
-    height: number;
-    dbw: number;
-    dbh: number;
-    pr: number;
-    lastTap: {
-      x: number;
-      y: number;
-      ndcX: number;
-      ndcY: number;
-      hit: string | null;
-    } | null;
-  } {
-    return {
-      camDist: this.camDist,
-      width: this.width,
-      height: this.height,
-      dbw: Math.round(this.width * this.bufferScale),
-      dbh: Math.round(this.height * this.bufferScale),
-      pr: this.bufferScale,
-      lastTap: this.lastTap,
-    };
   }
 
   resize(w: number, h: number): void {
@@ -812,9 +771,9 @@ export class BodyScene {
   /** Adjust camera distance so the body fills the view width nicely. */
   private fitCameraToView(): void {
     if (this.width <= 0 || this.height <= 0) return;
-    // Full-bleed container on Home. Distance 3.8 frames the body to fill
-    // width without excessive cropping.
-    this.camDist = 3.8;
+    // Full-bleed container on Home. Distance 4.3 gives the body breathing
+    // room without feeling zoomed in.
+    this.camDist = 4.3;
     this.camera.position.set(0, 2.05, this.camDist);
     this.camera.lookAt(0, 1.85, 0);
   }
