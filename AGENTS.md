@@ -28,6 +28,7 @@ Run lint and typecheck before declaring any task done.
 - Use **Expo Router** for all navigation. Routes live in `src/app/` — every file there is a screen, `_layout.tsx` files define navigators. Keep non-route code (components, hooks, utils) outside `src/app/`.
 - Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
 - Docs: https://docs.expo.dev/router/introduction.md
+- **Never pass a style array to a direct child of `<Link asChild>` (or any Slot).** expo-router's Slot cannot merge style arrays: dev throws, production silently drops the styles (2026-10-09: this broke the Home cards in v0.4). Always pass a single flattened object: `style={StyleSheet.flatten([styles.card, { backgroundColor: colors.surface }])}`.
 
 ## Building with EAS
 

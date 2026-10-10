@@ -85,11 +85,12 @@ export default function AboutScreen() {
 
       <Link href="/settings" asChild>
         <Pressable
-          style={[
+          // Flattened: expo-router's asChild Slot cannot merge style arrays.
+          style={StyleSheet.flatten([
             styles.card,
             styles.settingsRow,
             { backgroundColor: colors.surface, borderColor: colors.line },
-          ]}
+          ])}
         >
           <Ionicons
             name="settings-outline"

@@ -76,13 +76,14 @@ export default function HomeScreen() {
       {links.map((link) => (
         <Link key={link.title} href={link.href} asChild>
           <Pressable
-            style={[
+            // Flattened: expo-router's asChild Slot cannot merge style arrays.
+            style={StyleSheet.flatten([
               styles.linkCard,
               {
                 backgroundColor: colors.surface,
                 borderColor: colors.line,
               },
-            ]}
+            ])}
           >
             <View style={[styles.linkIcon, { backgroundColor: colors.bg }]}>
               <Ionicons name={link.icon} size={24} color={colors.accent} />
