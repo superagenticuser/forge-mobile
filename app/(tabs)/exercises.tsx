@@ -38,8 +38,8 @@ function Chip({
       style={[
         styles.chip,
         {
-          backgroundColor: active ? colors.ember : colors.surface,
-          borderColor: active ? colors.ember : colors.line,
+          backgroundColor: active ? colors.accent : colors.surface,
+          borderColor: active ? colors.accent : colors.line,
         },
       ]}
     >
@@ -230,7 +230,7 @@ export default function ExercisesScreen() {
             </Text>
             {hasFilters && (
               <Pressable
-                style={[styles.clearButton, { backgroundColor: colors.ember }]}
+                style={[styles.clearButton, { backgroundColor: colors.accent }]}
                 onPress={() => {
                   setQuery('');
                   setMuscle(null);

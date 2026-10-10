@@ -38,7 +38,7 @@ export default function HomeScreen() {
     >
       <View style={styles.hero}>
         <Text style={type.hero}>
-          FORGE<Text style={{ color: colors.ember }}>.</Text>
+          FORGE<Text style={{ color: colors.accent }}>.</Text>
         </Text>
         <Text style={[styles.tagline, { color: colors.muted }]}>
           Train with intent.
@@ -63,7 +63,7 @@ export default function HomeScreen() {
               },
             ]}
           >
-            <Text style={[styles.statValue, { color: colors.ember }]}>
+            <Text style={[styles.statValue, { color: colors.accent }]}>
               {s.value}
             </Text>
             <Text style={[styles.statLabel, { color: colors.muted }]}>
@@ -85,7 +85,7 @@ export default function HomeScreen() {
             ]}
           >
             <View style={[styles.linkIcon, { backgroundColor: colors.bg }]}>
-              <Ionicons name={link.icon} size={24} color={colors.ember} />
+              <Ionicons name={link.icon} size={24} color={colors.accent} />
             </View>
             <View style={styles.linkText}>
               <Text style={type.subtitle}>{link.title}</Text>

@@ -35,7 +35,7 @@ function Section({
   const theme = useTheme();
   return (
     <View style={styles.section}>
-      <Text style={[theme.type.subtitle, { color: theme.colors.ember }]}>
+      <Text style={[theme.type.subtitle, { color: theme.colors.accent }]}>
         {title}
       </Text>
       {children}
@@ -58,10 +58,10 @@ function VariationLink({ id }: { id: string }) {
         router.push({ pathname: '/exercise/[id]', params: { id } })
       }
     >
-      <Text style={[type.body, { color: colors.ember, fontWeight: '600' }]}>
+      <Text style={[type.body, { color: colors.accent, fontWeight: '600' }]}>
         {target.name}
       </Text>
-      <Ionicons name="chevron-forward" size={16} color={colors.ember} />
+      <Ionicons name="chevron-forward" size={16} color={colors.accent} />
     </Pressable>
   );
 }
@@ -79,7 +79,7 @@ export default function ExerciseDetailScreen() {
         <View style={styles.empty}>
           <Text style={type.subtitle}>Exercise not found</Text>
           <Pressable
-            style={[styles.backButton, { backgroundColor: colors.ember }]}
+            style={[styles.backButton, { backgroundColor: colors.accent }]}
             onPress={() => router.back()}
           >
             <Text style={[type.chip, { color: colors.bg }]}>Go back</Text>
@@ -139,7 +139,7 @@ export default function ExerciseDetailScreen() {
                 },
               ]}
             >
-              <Text style={[styles.stepNumberText, { color: colors.ember }]}>
+              <Text style={[styles.stepNumberText, { color: colors.accent }]}>
                 {i + 1}
               </Text>
             </View>

@@ -39,7 +39,7 @@ export default function ProgramDetailScreen() {
         <View style={styles.empty}>
           <Text style={type.subtitle}>Program not found</Text>
           <Pressable
-            style={[styles.backButton, { backgroundColor: colors.ember }]}
+            style={[styles.backButton, { backgroundColor: colors.accent }]}
             onPress={() => router.back()}
           >
             <Text style={[type.chip, { color: colors.bg }]}>Go back</Text>
@@ -70,7 +70,7 @@ export default function ProgramDetailScreen() {
 
       {program.days.map((day) => (
         <View key={day.name} style={styles.day}>
-          <Text style={[type.subtitle, { color: colors.ember }]}>
+          <Text style={[type.subtitle, { color: colors.accent }]}>
             {day.name}
           </Text>
           {day.exercises.map((entry) => {

@@ -56,7 +56,7 @@ function Section({
       </View>
       {items.map((item) => (
         <View key={item} style={styles.itemRow}>
-          <Text style={[styles.bullet, { color: colors.ember }]}>·</Text>
+          <Text style={[styles.bullet, { color: colors.accent }]}>·</Text>
           <Text style={[type.body, styles.itemText]}>{item}</Text>
         </View>
       ))}
@@ -74,7 +74,7 @@ export default function AboutScreen() {
     >
       <View style={styles.hero}>
         <Text style={type.hero}>
-          FORGE<Text style={{ color: colors.ember }}>.</Text>
+          FORGE<Text style={{ color: colors.accent }}>.</Text>
         </Text>
         <Text
           style={[type.body, { color: colors.muted, marginTop: spacing.xs }]}
@@ -128,7 +128,7 @@ export default function AboutScreen() {
       />
       <Section
         icon="map"
-        iconColor={colors.ember}
+        iconColor={colors.accent}
         title="Roadmap"
         items={roadmap}
       />
