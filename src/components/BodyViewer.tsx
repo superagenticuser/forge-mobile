@@ -192,7 +192,8 @@ export function BodyViewer(props: BodyViewerProps) {
       const lt = dbg.lastTap;
       setDebugInfo(
         `size: ${dbg.width.toFixed(0)}x${dbg.height.toFixed(0)} | cam: ${dbg.camDist.toFixed(2)}\n` +
-        `tap: (${x.toFixed(0)}, ${y.toFixed(0)}) -> NDC (${lt?.ndcX.toFixed(2)}, ${lt?.ndcY.toFixed(2)}) -> ${lt?.hit ?? 'miss'}`
+          `db: ${dbg.dbw}x${dbg.dbh} | pr: ${dbg.pr.toFixed(2)}\n` +
+          `tap: (${x.toFixed(0)}, ${y.toFixed(0)}) -> NDC (${lt?.ndcX.toFixed(2)}, ${lt?.ndcY.toFixed(2)}) -> ${lt?.hit ?? 'miss'}`
       );
       if (!mid) return;
       const group = groupOf(mid);
@@ -359,7 +360,8 @@ export function BodyViewer(props: BodyViewerProps) {
       {debugOn && (
         <View style={styles.debugOverlay} pointerEvents="none">
           <Text style={styles.debugText}>
-            {debugInfo || `size: ${size?.w.toFixed(0) ?? '?'}x${size?.h.toFixed(0) ?? '?'} | tap a muscle`}
+            {debugInfo ||
+              `size: ${size?.w.toFixed(0) ?? '?'}x${size?.h.toFixed(0) ?? '?'} | tap a muscle`}
           </Text>
           <Text style={styles.debugText}>Tap overlay to hide</Text>
         </View>

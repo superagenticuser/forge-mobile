@@ -125,8 +125,17 @@ export class BodyScene {
   private camDist: number;
   private pinchStartDist = 0;
   private lastAct = Date.now();
-  private lastTap: { x: number; y: number; ndcX: number; ndcY: number; hit: string | null } | null = null;
+  private lastTap: {
+    x: number;
+    y: number;
+    ndcX: number;
+    ndcY: number;
+    hit: string | null;
+  } | null = null;
   private interacting = false;
+  // Physical pixels per layout point of the expo-gl drawing buffer, captured
+  // at context creation. The GL viewport must cover the whole buffer.
+  private bufferScale = 1;
 
   private raf = 0;
   private dead = false;
@@ -156,15 +165,18 @@ export class BodyScene {
       alpha: true,
     });
     this.renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
-    this.renderer.setPixelRatio(Math.min(opts.pixelRatio || 1, 2));
-    this.renderer.setSize(opts.width, opts.height);
+    // Render into the full expo-gl drawing buffer (physical pixels). Sizing
+    // the renderer from layout points with a capped pixel ratio leaves the GL
+    // viewport smaller than the real surface, which shrank and shifted the
+    // image and broke tap mapping.
+    const pr = opts.pixelRatio || 1;
+    const dbw = Math.round(gl.drawingBufferWidth || opts.width * pr);
+    const dbh = Math.round(gl.drawingBufferHeight || opts.height * pr);
+    this.bufferScale = dbw / opts.width;
+    this.renderer.setPixelRatio(1);
+    this.renderer.setSize(dbw, dbh);
 
-    this.camera = new THREE.PerspectiveCamera(
-      38,
-      opts.width / opts.height,
-      0.1,
-      100
-    );
+    this.camera = new THREE.PerspectiveCamera(38, dbw / dbh, 0.1, 100);
     this.camera.position.set(0, 2.05, this.camDist);
     this.camera.lookAt(0, 1.85, 0);
     this.fitCameraToView();
@@ -747,16 +759,39 @@ export class BodyScene {
     this.raycaster.setFromCamera(ndc, this.camera);
     const hit = this.raycaster.intersectObjects(this.muscleMeshes, false)[0];
     this.lastAct = Date.now();
-    this.lastTap = { x, y, ndcX: ndc.x, ndcY: ndc.y, hit: hit ? (hit.object.userData.muscle as string) : null };
+    this.lastTap = {
+      x,
+      y,
+      ndcX: ndc.x,
+      ndcY: ndc.y,
+      hit: hit ? (hit.object.userData.muscle as string) : null,
+    };
     return hit ? (hit.object.userData.muscle as string) : null;
   }
 
   /** Debug info for diagnosing framing and tap issues. */
-  getDebugInfo(): { camDist: number; width: number; height: number; lastTap: { x: number; y: number; ndcX: number; ndcY: number; hit: string | null } | null } {
+  getDebugInfo(): {
+    camDist: number;
+    width: number;
+    height: number;
+    dbw: number;
+    dbh: number;
+    pr: number;
+    lastTap: {
+      x: number;
+      y: number;
+      ndcX: number;
+      ndcY: number;
+      hit: string | null;
+    } | null;
+  } {
     return {
       camDist: this.camDist,
       width: this.width,
       height: this.height,
+      dbw: Math.round(this.width * this.bufferScale),
+      dbh: Math.round(this.height * this.bufferScale),
+      pr: this.bufferScale,
       lastTap: this.lastTap,
     };
   }
@@ -764,7 +799,11 @@ export class BodyScene {
   resize(w: number, h: number): void {
     this.width = w;
     this.height = h;
-    this.renderer.setSize(w, h);
+    // Keep the viewport covering the full physical-pixel surface.
+    this.renderer.setSize(
+      Math.round(w * this.bufferScale),
+      Math.round(h * this.bufferScale)
+    );
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.fitCameraToView();
