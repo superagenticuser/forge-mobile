@@ -677,7 +677,8 @@ export class BodyScene {
       m.metalness = f.metalness;
       m.opacity = f.opacity;
       m.transparent = f.opacity < 1;
-      m.needsUpdate = true;
+      // Note: no needsUpdate needed, these are all uniforms. Forcing a
+      // shader recompile here crashes expo-gl on some devices.
     };
     apply(this.baseMat);
     if (this.neutralMat) {
@@ -686,7 +687,6 @@ export class BodyScene {
       this.neutralMat.metalness = f.metalness;
       this.neutralMat.opacity = f.opacity;
       this.neutralMat.transparent = f.opacity < 1;
-      this.neutralMat.needsUpdate = true;
     }
     if (this.mats) {
       for (const id in this.mats) apply(this.mats[id]);
