@@ -20,6 +20,7 @@ import { useTheme } from '@/src/storage/settings';
 import { DataSection } from '@/src/components/settings/DataSection';
 import { ConfirmDialog } from '@/src/components/ConfirmDialog';
 import { ACCENTS, radius, spacing } from '@/src/theme';
+import * as Updates from 'expo-updates';
 
 const EQUIPMENT_NAMES: Record<string, string> = {
   bodyweight: 'Bodyweight',
@@ -508,14 +509,16 @@ export default function SettingsScreen() {
       <ConfirmDialog
         visible={pendingFinish !== null}
         title="Restart required"
-        message="Changing the 3D body finish requires an app restart to apply safely. Force-close the app from recents and reopen it."
-        confirmLabel="Apply"
+        message="Changing the 3D body finish requires an app restart to apply safely. The app will restart now."
+        confirmLabel="Restart now"
         destructive={false}
-        onConfirm={() => {
+        onConfirm={async () => {
           if (pendingFinish) {
-            updateSettings({ bodyFinish: pendingFinish });
+            await updateSettings({ bodyFinish: pendingFinish });
           }
           setPendingFinish(null);
+          // Reload the app so the new finish is applied on a fresh GL context.
+          await Updates.reloadAsync();
         }}
         onCancel={() => setPendingFinish(null)}
       />
