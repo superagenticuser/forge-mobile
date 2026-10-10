@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ConfirmDialog } from '@/src/components/ConfirmDialog';
 import { BodyViewer } from '@/src/components/BodyViewer';
 import { ProgressionChart } from '@/src/components/ProgressionChart';
+import { ExerciseDemo } from '@/src/components/ExerciseDemo';
 import { PyramidModal } from '@/src/components/PyramidModal';
 import { CameraModal } from '@/src/components/camera/CameraModal';
 import { ClipLibraryModal } from '@/src/components/camera/ClipLibraryModal';
@@ -480,9 +481,7 @@ export default function ExerciseDetailScreen() {
       </Section>
 
       <Section title="Exercise demo">
-        <Text style={[type.body, { color: colors.muted }]}>
-          Animated form demos arrive with the workout extras phase.
-        </Text>
+        <ExerciseDemo pattern={exercise.pattern} />
       </Section>
 
       {exercise.custom === true && (
