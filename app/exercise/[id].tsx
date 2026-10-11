@@ -224,7 +224,7 @@ export default function ExerciseDetailScreen() {
           highlightSecondary={exercise.secondary}
         />
         <Text style={[styles.hint, { color: theme.colors.muted }]}>
-          Red = primary, orange = secondary
+          Bright = primary, dim = secondary
         </Text>
       </Section>
 

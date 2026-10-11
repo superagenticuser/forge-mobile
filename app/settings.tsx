@@ -100,22 +100,41 @@ function ToggleRow({
   value,
   onChange,
   last,
+  note,
 }: {
   label: string;
   value: boolean;
   onChange: (v: boolean) => void;
   last?: boolean;
+  note?: string;
 }) {
   const theme = useTheme();
   return (
-    <Row label={label} last={last}>
-      <Switch
-        value={value}
-        onValueChange={onChange}
-        trackColor={{ false: theme.colors.line, true: theme.colors.volt }}
-        thumbColor={value ? theme.colors.accentInk : theme.colors.muted}
-      />
-    </Row>
+    <View
+      style={[
+        !last && {
+          borderBottomWidth: 1,
+          borderBottomColor: theme.colors.line,
+        },
+      ]}
+    >
+      <View style={styles.row}>
+        <Text style={[theme.type.body, { flex: 1 }]}>{label}</Text>
+        <Switch
+          value={value}
+          onValueChange={onChange}
+          trackColor={{ false: theme.colors.line, true: theme.colors.volt }}
+          thumbColor={value ? theme.colors.accentInk : theme.colors.muted}
+        />
+      </View>
+      {note ? (
+        <Text
+          style={[styles.note, { color: theme.colors.muted, paddingBottom: 12 }]}
+        >
+          {note}
+        </Text>
+      ) : null}
+    </View>
   );
 }
 
@@ -466,10 +485,8 @@ export default function SettingsScreen() {
           label="Advanced training tools"
           value={settings.advanced}
           onChange={(v) => updateSettings({ advanced: v })}
+          note="Shows travel mode and tempo coach in workouts."
         />
-        <Text style={[styles.note, { color: theme.colors.muted }]}>
-          Shows travel mode and tempo coach in workouts.
-        </Text>
         <StepperRow
           label="Short rest"
           value={settings.restShort}
