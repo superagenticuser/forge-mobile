@@ -14,7 +14,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ExercisePickerModal } from '@/src/components/ExercisePickerModal';
@@ -52,6 +52,7 @@ function fromKg(kg: number, units: Units): string {
 export default function BuilderScreen() {
   const theme = useTheme();
   const { colors, type, settings } = theme;
+  const insets = useSafeAreaInsets();
   const { exercises } = useLibrary();
   const { addCustomProgram, templates, saveTemplate, deleteTemplate } =
     usePrograms();
@@ -490,7 +491,11 @@ export default function BuilderScreen() {
           <Pressable
             style={[
               styles.sheet,
-              { backgroundColor: colors.surface, borderColor: colors.line },
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.line,
+                paddingBottom: Math.max(insets.bottom, 16),
+              },
             ]}
             onPress={(e) => e.stopPropagation()}
           >
@@ -562,7 +567,11 @@ export default function BuilderScreen() {
           <Pressable
             style={[
               styles.sheet,
-              { backgroundColor: colors.surface, borderColor: colors.line },
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.line,
+                paddingBottom: Math.max(insets.bottom, 16),
+              },
             ]}
             onPress={(e) => e.stopPropagation()}
           >
