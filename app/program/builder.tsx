@@ -565,22 +565,25 @@ export default function BuilderScreen() {
         transparent
         onRequestClose={() => setTplNameOpen(null)}
       >
-        <Pressable style={styles.veil} onPress={() => setTplNameOpen(null)}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.sheetWrap}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalWrap}
+        >
+          <Pressable
+            style={styles.veil}
+            onPress={() => setTplNameOpen(null)}
           >
-            <Pressable
-              style={[
-                styles.sheet,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.line,
-                  paddingBottom: Math.max(insets.bottom, 16),
-                },
-              ]}
-              onPress={(e) => e.stopPropagation()}
-            >
+            <View style={styles.sheetWrap}>
+              <Pressable
+                style={[
+                  styles.sheet,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.line,
+                  },
+                ]}
+                onPress={(e) => e.stopPropagation()}
+              >
             <Text style={type.subtitle}>Template name</Text>
             <TextInput
               style={[type.body, styles.input, inputColors]}
@@ -608,10 +611,15 @@ export default function BuilderScreen() {
               }}
             >
               <Text style={[type.chip, { color: colors.bg }]}>Save</Text>
+              </Pressable>
             </Pressable>
-            </Pressable>
-          </KeyboardAvoidingView>
-        </Pressable>
+            <SafeAreaView
+              edges={['bottom']}
+              style={{ backgroundColor: colors.surface }}
+            />
+            </View>
+          </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
 
       <ConfirmDialog
@@ -728,6 +736,9 @@ const styles = StyleSheet.create({
   sheetWrap: {
     width: '100%',
     justifyContent: 'flex-end',
+  },
+  modalWrap: {
+    flex: 1,
   },
   sheet: {
     borderTopLeftRadius: radius.lg,
