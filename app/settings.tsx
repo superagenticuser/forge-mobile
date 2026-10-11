@@ -421,6 +421,7 @@ export default function SettingsScreen() {
         <EquipmentChips />
       </Section>
 
+      {/* Language selector hidden for now - no i18n infrastructure yet.
       <Section title="Language">
         <SegmentedRow
           label="Language"
@@ -433,6 +434,7 @@ export default function SettingsScreen() {
           last
         />
       </Section>
+      */}
 
       <Section title="Workout">
         <ToggleRow
