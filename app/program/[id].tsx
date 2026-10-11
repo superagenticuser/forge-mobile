@@ -188,7 +188,8 @@ export default function ProgramDetailScreen() {
               </Text>
             )}
           </Text>
-          <Pressable
+          {theme.settings.advanced && (
+            <Pressable
             style={[
               styles.travelToggle,
               {
@@ -207,6 +208,7 @@ export default function ProgramDetailScreen() {
               color={travelOn ? colors.bg : colors.muted}
             />
           </Pressable>
+          )}
           <Pressable
             style={[styles.startDayButton, { backgroundColor: colors.accent }]}
             disabled={starting !== null}
