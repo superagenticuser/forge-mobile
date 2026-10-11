@@ -120,7 +120,7 @@ export function CenterActionBar({ state, navigation }: any) {
 const styles = StyleSheet.create({
   wrapper: {
     borderTopWidth: 1,
-    paddingTop: spacing.sm,
+    paddingTop: 2,
   },
   bar: {
     flexDirection: 'row',
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    top: spacing.sm,
+    top: 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -28,
+    marginTop: -18,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
