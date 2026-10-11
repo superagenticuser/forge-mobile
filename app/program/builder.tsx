@@ -6,7 +6,9 @@
 import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import {
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -547,7 +549,7 @@ export default function BuilderScreen() {
               </View>
             ))}
             <Pressable
-              style={[styles.smallBtn, { borderColor: colors.line }]}
+              style={[styles.closeBtn, { borderColor: colors.line }]}
               onPress={() => setTplDay(null)}
             >
               <Text style={[type.chip, { color: colors.muted }]}>Close</Text>
@@ -564,17 +566,21 @@ export default function BuilderScreen() {
         onRequestClose={() => setTplNameOpen(null)}
       >
         <Pressable style={styles.veil} onPress={() => setTplNameOpen(null)}>
-          <Pressable
-            style={[
-              styles.sheet,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.line,
-                paddingBottom: Math.max(insets.bottom, 16),
-              },
-            ]}
-            onPress={(e) => e.stopPropagation()}
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.sheetWrap}
           >
+            <Pressable
+              style={[
+                styles.sheet,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.line,
+                  paddingBottom: Math.max(insets.bottom, 16),
+                },
+              ]}
+              onPress={(e) => e.stopPropagation()}
+            >
             <Text style={type.subtitle}>Template name</Text>
             <TextInput
               style={[type.body, styles.input, inputColors]}
@@ -603,7 +609,8 @@ export default function BuilderScreen() {
             >
               <Text style={[type.chip, { color: colors.bg }]}>Save</Text>
             </Pressable>
-          </Pressable>
+            </Pressable>
+          </KeyboardAvoidingView>
         </Pressable>
       </Modal>
 
@@ -687,6 +694,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
   },
+  closeBtn: {
+    borderWidth: 1,
+    borderRadius: radius.pill,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
   addDay: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -710,6 +723,10 @@ const styles = StyleSheet.create({
   veil: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  sheetWrap: {
+    width: '100%',
     justifyContent: 'flex-end',
   },
   sheet: {
