@@ -85,19 +85,15 @@ export function CenterActionBar({ state, navigation }: any) {
     <View
       style={[
         styles.wrapper,
-        { paddingBottom: Math.max(insets.bottom, spacing.sm) },
+        {
+          paddingBottom: Math.max(insets.bottom, spacing.sm),
+          backgroundColor: colors.surface,
+          borderTopColor: colors.line,
+        },
       ]}
       pointerEvents="box-none"
     >
-      <View
-        style={[
-          styles.bar,
-          {
-            backgroundColor: colors.surface,
-            borderColor: colors.line,
-          },
-        ]}
-      >
+      <View style={styles.bar}>
         {renderTab(0)}
         {renderTab(1)}
         <View style={styles.centerWrap}>
@@ -129,11 +125,11 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     paddingTop: spacing.sm,
+    borderTopWidth: 1,
   },
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderTopWidth: 1,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
   },
