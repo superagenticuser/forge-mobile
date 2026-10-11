@@ -20,52 +20,60 @@ function PlateDiagram({ plates }: { plates: number[] }) {
   const theme = useTheme();
   const { colors } = theme;
   const maxW = Math.max(25, ...plates);
-  return (
-    <View style={styles.diagram}>
-      {/* bar shaft */}
-      <View style={[styles.shaft, { backgroundColor: '#8a8f98' }]} />
-      <View style={styles.platesRow}>
-        {[...plates]
-          .sort((a, b) => b - a)
-          .map((w, i) => {
-            const frac = w / maxW;
-            const height = 26 + Math.round(54 * frac);
-            const width = 10 + Math.round(14 * frac);
-            const color = PLATE_COLORS[w] ?? '#8a8f98';
-            const dark = color === '#e8e8e8';
-            return (
-              <View
-                key={`${w}-${i}`}
-                style={[
-                  styles.plate,
-                  {
-                    height,
-                    width,
-                    backgroundColor: color,
-                    borderColor: dark ? '#9aa0a8' : 'rgba(0,0,0,0.35)',
-                  },
-                ]}
-              >
-                {height >= 52 && (
-                  <Text
-                    style={[
-                      styles.plateLabel,
-                      { color: dark ? '#1a1d21' : '#fff' },
-                    ]}
-                  >
-                    {w}
-                  </Text>
-                )}
-              </View>
-            );
-          })}
-        {/* collar */}
-        {plates.length > 0 && (
-          <View style={[styles.collar, { backgroundColor: colors.muted }]} />
+  const ordered = [...plates].sort((a, b) => b - a);
+
+  const renderPlate = (w: number, i: number, side: 'left' | 'right') => {
+    const frac = w / maxW;
+    const height = Math.round(34 + 66 * frac);
+    const width = Math.round(9 + 11 * frac);
+    const color = PLATE_COLORS[w] ?? '#8a8f98';
+    const dark = color === '#e8e8e8';
+    const labelColor = dark || w === 15 ? '#1a1d21' : '#fff';
+    return (
+      <View
+        key={`${side}-${w}-${i}`}
+        style={[
+          styles.plate,
+          {
+            height,
+            width,
+            backgroundColor: color,
+            borderColor: dark ? '#9aa0a8' : 'rgba(0,0,0,0.35)',
+          },
+        ]}
+      >
+        {height >= 52 && (
+          <Text
+            style={[
+              styles.plateLabel,
+              { color: labelColor, fontSize: height >= 80 ? 13 : 11 },
+            ]}
+          >
+            {w}
+          </Text>
         )}
       </View>
+    );
+  };
+
+  return (
+    <View style={styles.diagram}>
+      <View style={styles.barbellRow}>
+        {/* left side (mirror): collar, then plates lightest to heaviest */}
+        <View style={[styles.collar, { backgroundColor: '#5a5f66' }]} />
+        {[...ordered]
+          .reverse()
+          .map((w, i) => renderPlate(w, i, 'left'))}
+        {/* center knurl mark */}
+        <View style={styles.knurl} />
+        {/* right side: plates heaviest to lightest, then collar */}
+        {ordered.map((w, i) => renderPlate(w, i, 'right'))}
+        <View style={[styles.collar, { backgroundColor: '#5a5f66' }]} />
+      </View>
+      {/* bar shaft */}
+      <View style={[styles.shaftFull, { backgroundColor: '#8a8f98' }]} />
       <Text style={[styles.diagramCaption, { color: colors.muted }]}>
-        One side of the bar, heaviest plate nearest the center
+        Heaviest plate nearest the center on each side
       </Text>
     </View>
   );
@@ -227,20 +235,25 @@ const styles = StyleSheet.create({
   },
   result: { gap: spacing.md },
   diagram: { alignItems: 'center', gap: spacing.sm },
-  shaft: {
-    width: '90%',
-    height: 6,
-    borderRadius: 3,
-    position: 'absolute',
-    left: '5%',
-    top: 40,
-  },
-  platesRow: {
+  barbellRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
-    minHeight: 90,
+    minHeight: 110,
     paddingTop: 4,
+  },
+  shaftFull: {
+    width: '95%',
+    height: 6,
+    borderRadius: 3,
+    marginTop: -58,
+  },
+  knurl: {
+    width: 3,
+    height: 10,
+    borderRadius: 1.5,
+    backgroundColor: '#6a6f78',
+    marginHorizontal: 2,
   },
   plate: {
     borderWidth: 1,
@@ -248,7 +261,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  plateLabel: { fontSize: 10, fontWeight: '700' },
-  collar: { width: 8, height: 22, borderRadius: 2 },
+  plateLabel: { fontWeight: '700' },
+  collar: { width: 7, height: 20, borderRadius: 2 },
   diagramCaption: { fontSize: 12 },
 });
