@@ -1,26 +1,41 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link, Tabs } from 'expo-router';
-import { Pressable } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { useTheme } from '@/src/storage/settings';
-import { FloatingDock } from '@/src/components/FloatingDock';
+import { CenterActionBar } from '@/src/components/CenterActionBar';
 
-function SettingsGear() {
+function HeaderButtons() {
   const theme = useTheme();
   return (
-    <Link href="/settings" asChild>
-      <Pressable
-        hitSlop={12}
-        style={{ marginRight: 16 }}
-        accessibilityLabel="Open settings"
-      >
-        <Ionicons
-          name="settings-outline"
-          size={24}
-          color={theme.colors.muted}
-        />
-      </Pressable>
-    </Link>
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <Link href="/about" asChild>
+        <Pressable
+          hitSlop={12}
+          style={{ marginRight: 16 }}
+          accessibilityLabel="About"
+        >
+          <Ionicons
+            name="information-circle-outline"
+            size={24}
+            color={theme.colors.muted}
+          />
+        </Pressable>
+      </Link>
+      <Link href="/settings" asChild>
+        <Pressable
+          hitSlop={12}
+          style={{ marginRight: 16 }}
+          accessibilityLabel="Open settings"
+        >
+          <Ionicons
+            name="settings-outline"
+            size={24}
+            color={theme.colors.muted}
+          />
+        </Pressable>
+      </Link>
+    </View>
   );
 }
 
@@ -28,7 +43,7 @@ export default function TabLayout() {
   const theme = useTheme();
   return (
     <Tabs
-      tabBar={(props) => <FloatingDock {...props} />}
+      tabBar={(props) => <CenterActionBar {...props} />}
       screenOptions={{
         headerStyle: { backgroundColor: theme.colors.bg },
         headerTintColor: theme.colors.ink,
@@ -40,7 +55,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
-          headerRight: () => <SettingsGear />,
+          headerRight: () => <HeaderButtons />,
         }}
       />
       <Tabs.Screen
@@ -59,12 +74,6 @@ export default function TabLayout() {
         name="progress"
         options={{
           title: 'Progress',
-        }}
-      />
-      <Tabs.Screen
-        name="about"
-        options={{
-          title: 'About',
         }}
       />
     </Tabs>
