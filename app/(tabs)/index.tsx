@@ -215,7 +215,7 @@ export default function HomeScreen() {
           </Text>
         </View>
         <View style={styles.bodyFullBleed}>
-          <BodyViewer height={520} />
+          <BodyViewer height={380} />
           <Text style={[styles.hint, { color: colors.muted }]}>
             Drag to rotate · pinch to zoom · tap a muscle
           </Text>
