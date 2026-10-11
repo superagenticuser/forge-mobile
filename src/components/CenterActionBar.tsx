@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 
 import { useTheme } from '@/src/storage/settings';
 import { useWorkout } from '@/src/storage/workout';
-import { radius, spacing } from '@/src/theme';
+import { spacing } from '@/src/theme';
 
 const TABS: Array<{
   route: string;
@@ -36,7 +36,6 @@ export function CenterActionBar({ state, navigation }: any) {
 
   const renderTab = (tabIndex: number) => {
     const tab = TABS[tabIndex];
-    // Find the route index in state.routes
     const routeIndex = state.routes.findIndex((r: any) => r.name === tab.route);
     if (routeIndex === -1) return null;
     const route = state.routes[routeIndex];
@@ -91,7 +90,6 @@ export function CenterActionBar({ state, navigation }: any) {
           borderTopColor: colors.line,
         },
       ]}
-      pointerEvents="box-none"
     >
       <View style={styles.bar}>
         {renderTab(0)}
@@ -100,31 +98,29 @@ export function CenterActionBar({ state, navigation }: any) {
         {renderTab(2)}
         {renderTab(3)}
       </View>
-      <Pressable
-        onPress={onWorkoutPress}
-        hitSlop={8}
-        accessibilityRole="button"
-        accessibilityLabel={workout ? 'Resume workout' : 'Start workout'}
-        style={[styles.centerButton, { backgroundColor: colors.accent }]}
-      >
-        <Ionicons
-          name={workout ? 'refresh' : 'play'}
-          size={28}
-          color={colors.bg}
-        />
-      </Pressable>
+      <View style={styles.centerAbsolute} pointerEvents="box-none">
+        <Pressable
+          onPress={onWorkoutPress}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={workout ? 'Resume workout' : 'Start workout'}
+          style={[styles.centerButton, { backgroundColor: colors.accent }]}
+        >
+          <Ionicons
+            name={workout ? 'refresh' : 'play'}
+            size={28}
+            color={colors.bg}
+          />
+        </Pressable>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingTop: spacing.sm,
     borderTopWidth: 1,
+    paddingTop: spacing.sm,
   },
   bar: {
     flexDirection: 'row',
@@ -145,16 +141,21 @@ const styles = StyleSheet.create({
   centerSpacer: {
     flex: 1,
   },
-  centerButton: {
+  centerAbsolute: {
     position: 'absolute',
-    left: '50%',
-    marginLeft: -28,
-    top: -20,
+    left: 0,
+    right: 0,
+    top: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  centerButton: {
     width: 56,
     height: 56,
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: -28,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
