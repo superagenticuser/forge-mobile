@@ -96,24 +96,23 @@ export function CenterActionBar({ state, navigation }: any) {
       <View style={styles.bar}>
         {renderTab(0)}
         {renderTab(1)}
-        <View style={styles.centerWrap}>
-          <Pressable
-            onPress={onWorkoutPress}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={workout ? 'Resume workout' : 'Start workout'}
-            style={[styles.centerButton, { backgroundColor: colors.accent }]}
-          >
-            <Ionicons
-              name={workout ? 'refresh' : 'play'}
-              size={28}
-              color={colors.bg}
-            />
-          </Pressable>
-        </View>
+        <View style={styles.centerSpacer} />
         {renderTab(2)}
         {renderTab(3)}
       </View>
+      <Pressable
+        onPress={onWorkoutPress}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel={workout ? 'Resume workout' : 'Start workout'}
+        style={[styles.centerButton, { backgroundColor: colors.accent }]}
+      >
+        <Ionicons
+          name={workout ? 'refresh' : 'play'}
+          size={28}
+          color={colors.bg}
+        />
+      </Pressable>
     </View>
   );
 }
@@ -143,18 +142,19 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 10,
   },
-  centerWrap: {
+  centerSpacer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   centerButton: {
+    position: 'absolute',
+    left: '50%',
+    marginLeft: -28,
+    top: -20,
     width: 56,
     height: 56,
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -24,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
