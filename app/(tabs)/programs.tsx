@@ -422,7 +422,11 @@ export default function ProgramsScreen() {
           <Pressable
             style={[
               styles.sheet,
-              { backgroundColor: colors.surface, borderColor: colors.line },
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.line,
+                paddingBottom: Math.max(insets.bottom, spacing.lg),
+              },
             ]}
             onPress={(e) => e.stopPropagation()}
           >

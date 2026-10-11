@@ -1032,7 +1032,11 @@ export default function WorkoutScreen() {
           title: `Workout · ${fmtDuration(elapsed)}`,
           gestureEnabled: false,
           headerLeft: () => (
-            <Pressable onPress={() => setConfirmCancel(true)} hitSlop={8}>
+            <Pressable
+              onPress={() => setConfirmCancel(true)}
+              hitSlop={8}
+              style={{ marginRight: 16 }}
+            >
               <Text style={{ color: colors.ember, fontWeight: '600' }}>
                 Cancel
               </Text>
