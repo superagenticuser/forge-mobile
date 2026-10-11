@@ -35,13 +35,11 @@ function fmtTimer(sec: number): string {
 
 /** Ensure the forge-media directory exists and return it. */
 function mediaDir(): Directory {
-  try {
-    const dir = new Directory(Paths.document, 'forge-media');
-    dir.list();
-    return dir;
-  } catch {
-    return Paths.document.createDirectory('forge-media');
+  const dir = new Directory(Paths.document, 'forge-media');
+  if (!dir.exists) {
+    dir.create();
   }
+  return dir;
 }
 
 export function CameraModal({
@@ -175,23 +173,32 @@ export function CameraModal({
         recTimer.current = null;
       }
       setRecording(false);
-      if (res?.uri && exId) {
-        const dir = mediaDir();
-        const dest = `${dir.uri}clip-${Date.now()}.mp4`;
-        await copyAsync({ from: res.uri, to: dest });
-        await insertClip({
-          exId,
-          exName: exName ?? '',
-          date: todayKey(),
-          ts: Date.now(),
-          reps,
-          mime: 'video/mp4',
-          uri: dest,
-        });
-        onClipSaved?.(reps);
+      if (!res?.uri) {
+        console.warn('[CameraModal] recordAsync returned no uri', res);
+      } else if (!exId) {
+        console.warn('[CameraModal] no exId, skipping clip save');
+      } else {
+        try {
+          const dir = mediaDir();
+          const dest = `${dir.uri}clip-${Date.now()}.mp4`;
+          await copyAsync({ from: res.uri, to: dest });
+          await insertClip({
+            exId,
+            exName: exName ?? '',
+            date: todayKey(),
+            ts: Date.now(),
+            reps,
+            mime: 'video/mp4',
+            uri: dest,
+          });
+          onClipSaved?.(reps);
+        } catch (saveErr) {
+          console.error('[CameraModal] failed to save clip', saveErr);
+        }
       }
       onClose();
-    } catch {
+    } catch (err) {
+      console.error('[CameraModal] recording failed', err);
       if (recTimer.current) {
         clearInterval(recTimer.current);
         recTimer.current = null;
