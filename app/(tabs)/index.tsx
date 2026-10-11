@@ -57,6 +57,20 @@ export default function HomeScreen() {
 
   const score = useMemo(() => recoveryScore(logs), [logs]);
 
+  const showReminder = useMemo(() => {
+    const r = theme.settings.reminder;
+    if (!r) return false;
+    const [h, m] = r.split(':').map(Number);
+    if (Number.isNaN(h) || Number.isNaN(m)) return false;
+    const now = new Date();
+    const reminderTime = new Date(now);
+    reminderTime.setHours(h, m, 0, 0);
+    // Show if reminder time has passed and no workout logged today
+    const todayKey = fmtDateKey(now);
+    const workedOutToday = logs.some((l) => l.date === todayKey);
+    return now >= reminderTime && !workedOutToday;
+  }, [theme.settings.reminder, logs]);
+
   const onStartWorkout = async () => {
     await startFreeWorkout();
     router.push('/workout');
@@ -67,6 +81,19 @@ export default function HomeScreen() {
       style={[styles.root, { backgroundColor: colors.bg }]}
       contentContainerStyle={styles.content}
     >
+      {showReminder && (
+        <View
+          style={[
+            styles.reminderBanner,
+            { backgroundColor: colors.surface, borderColor: colors.accent },
+          ]}
+        >
+          <Ionicons name="alarm-outline" size={20} color={colors.accent} />
+          <Text style={[type.body, { color: colors.ink, flex: 1 }]}>
+            Time to train! Your {theme.settings.reminder} workout reminder.
+          </Text>
+        </View>
+      )}
       <View style={styles.hero}>
         <Text style={type.hero}>
           FORGE<Text style={{ color: colors.accent }}>.</Text>
@@ -225,6 +252,15 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   content: { padding: spacing.lg, gap: spacing.lg },
   hero: { paddingTop: spacing.xl, paddingBottom: spacing.sm },
+  reminderBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
   tagline: { ...typeBase.body, marginTop: spacing.xs },
   startButton: {
     flexDirection: 'row',

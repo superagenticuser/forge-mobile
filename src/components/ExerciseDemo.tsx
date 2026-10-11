@@ -61,11 +61,14 @@ function lerpPose(a: Pose, b: Pose, t: number): Pose {
 
 export function ExerciseDemo({ pattern }: { pattern: string }) {
   const theme = useTheme();
-  const { colors, type } = theme;
+  const { colors, type, settings } = theme;
   const [progress, setProgress] = useState(0);
-  const [playing, setPlaying] = useState(true);
+  const [playing, setPlaying] = useState(
+    settings.demoAutoplay !== false && !settings.reduceMotion
+  );
   const progressRef = useRef(0);
   const rafRef = useRef<number>(0);
+  const speed = settings.demoSpeed || 1;
 
   const demo = (DEMOS as Record<string, Demo>)[pattern] || null;
 
@@ -94,9 +97,9 @@ export function ExerciseDemo({ pattern }: { pattern: string }) {
   // Animation loop
   useEffect(() => {
     if (!playing || !demo) return;
-    const startTime = Date.now() - progressRef.current * totalDur * 1000;
+    const startTime = Date.now() - progressRef.current * totalDur * 1000 / speed;
     const tick = () => {
-      const elapsed = (Date.now() - startTime) / 1000;
+      const elapsed = ((Date.now() - startTime) / 1000) * speed;
       const p = (elapsed % totalDur) / totalDur;
       progressRef.current = p;
       setProgress(p);
@@ -104,7 +107,7 @@ export function ExerciseDemo({ pattern }: { pattern: string }) {
     };
     rafRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [playing, demo, totalDur]);
+  }, [playing, demo, totalDur, speed]);
 
   // Scrub gesture
   const scrubGesture = Gesture.Pan()

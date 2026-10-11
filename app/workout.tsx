@@ -432,6 +432,7 @@ function ExerciseCard({
   const { colors, type } = theme;
   const { byId } = useLibrary();
   const units = theme.settings.units;
+  const showAdvanced = theme.settings.advanced;
   const {
     workout,
     toggleExerciseExpanded,
@@ -586,26 +587,28 @@ function ExerciseCard({
                 Guide
               </Text>
             </Pressable>
-            <Pressable
-              style={styles.actionButton}
-              onPress={() => setShowTempo((v) => !v)}
-              hitSlop={8}
-              accessibilityLabel="Tempo coach"
-            >
-              <Ionicons
-                name="timer-outline"
-                size={18}
-                color={showTempo ? colors.accent : colors.muted}
-              />
-              <Text
-                style={[
-                  styles.actionLabel,
-                  { color: showTempo ? colors.accent : colors.muted },
-                ]}
+            {showAdvanced && (
+              <Pressable
+                style={styles.actionButton}
+                onPress={() => setShowTempo((v) => !v)}
+                hitSlop={8}
+                accessibilityLabel="Tempo coach"
               >
-                Tempo
-              </Text>
-            </Pressable>
+                <Ionicons
+                  name="timer-outline"
+                  size={18}
+                  color={showTempo ? colors.accent : colors.muted}
+                />
+                <Text
+                  style={[
+                    styles.actionLabel,
+                    { color: showTempo ? colors.accent : colors.muted },
+                  ]}
+                >
+                  Tempo
+                </Text>
+              </Pressable>
+            )}
             {ex?.equipment === 'barbell' && (
               <Pressable
                 style={styles.actionButton}
@@ -977,6 +980,7 @@ function RestBar() {
 export default function WorkoutScreen() {
   const theme = useTheme();
   const { colors, type } = theme;
+  const showAdvanced = theme.settings.advanced;
   useKeepAwake();
 
   const {
@@ -1097,6 +1101,7 @@ export default function WorkoutScreen() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
+      {showAdvanced && (
         <View
           style={[
             styles.travelRow,
@@ -1124,6 +1129,7 @@ export default function WorkoutScreen() {
             accessibilityLabel="Travel mode"
           />
         </View>
+      )}
 
         {workout.exercises.map((e, i) => (
           <ExerciseCard key={e.key} exercise={e} index={i} />
