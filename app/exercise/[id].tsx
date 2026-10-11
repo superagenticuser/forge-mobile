@@ -223,6 +223,9 @@ export default function ExerciseDetailScreen() {
           highlightPrimary={[exercise.primary]}
           highlightSecondary={exercise.secondary}
         />
+        <Text style={[styles.hint, { color: theme.colors.muted }]}>
+          Red = primary, orange = secondary
+        </Text>
       </Section>
 
       <Section title="Estimated 1RM">
@@ -519,6 +522,7 @@ export default function ExerciseDetailScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   content: { padding: spacing.lg, gap: spacing.lg },
+  hint: { fontSize: 12, textAlign: 'center', marginTop: spacing.xs },
   empty: {
     flex: 1,
     alignItems: 'center',

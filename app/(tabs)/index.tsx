@@ -216,6 +216,9 @@ export default function HomeScreen() {
         </View>
         <View style={styles.bodyFullBleed}>
           <BodyViewer height={520} />
+          <Text style={[styles.hint, { color: colors.muted }]}>
+            Drag to rotate · pinch to zoom · tap a muscle
+          </Text>
         </View>
       </View>
 
@@ -262,6 +265,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   tagline: { ...typeBase.body, marginTop: spacing.xs },
+  hint: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.lg,
+  },
   startButton: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -154,7 +154,7 @@ function SetRow({
         keyboardType="decimal-pad"
         returnKeyType="done"
         editable={!set.done}
-        accessibilityLabel="RPE"
+        accessibilityLabel="RPE: Rate of Perceived Exertion (6=easy, 10=max effort)"
       />
       <Pressable
         onPress={() => deleteSet(exKey, set.key)}

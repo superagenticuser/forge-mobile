@@ -467,6 +467,9 @@ export default function SettingsScreen() {
           value={settings.advanced}
           onChange={(v) => updateSettings({ advanced: v })}
         />
+        <Text style={[styles.note, { color: theme.colors.muted }]}>
+          Shows travel mode and tempo coach in workouts.
+        </Text>
         <StepperRow
           label="Short rest"
           value={settings.restShort}
