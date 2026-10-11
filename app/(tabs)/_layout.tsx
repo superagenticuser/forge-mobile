@@ -3,6 +3,7 @@ import { Link, Tabs } from 'expo-router';
 import { Pressable } from 'react-native';
 
 import { useTheme } from '@/src/storage/settings';
+import { FloatingDock } from '@/src/components/FloatingDock';
 
 function SettingsGear() {
   const theme = useTheme();
@@ -27,13 +28,8 @@ export default function TabLayout() {
   const theme = useTheme();
   return (
     <Tabs
+      tabBar={(props) => <FloatingDock {...props} />}
       screenOptions={{
-        tabBarActiveTintColor: theme.colors.accent,
-        tabBarInactiveTintColor: theme.colors.muted,
-        tabBarStyle: {
-          backgroundColor: theme.colors.surface,
-          borderTopColor: theme.colors.line,
-        },
         headerStyle: { backgroundColor: theme.colors.bg },
         headerTintColor: theme.colors.ink,
         headerTitleStyle: { fontWeight: '700' },
@@ -45,45 +41,30 @@ export default function TabLayout() {
         options={{
           title: 'Home',
           headerRight: () => <SettingsGear />,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
-          ),
         }}
       />
       <Tabs.Screen
         name="exercises"
         options={{
           title: 'Exercises',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="barbell" size={size} color={color} />
-          ),
         }}
       />
       <Tabs.Screen
         name="programs"
         options={{
           title: 'Programs',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar" size={size} color={color} />
-          ),
         }}
       />
       <Tabs.Screen
         name="progress"
         options={{
           title: 'Progress',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="stats-chart" size={size} color={color} />
-          ),
         }}
       />
       <Tabs.Screen
         name="about"
         options={{
           title: 'About',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="information-circle" size={size} color={color} />
-          ),
         }}
       />
     </Tabs>
