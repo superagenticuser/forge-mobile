@@ -705,7 +705,7 @@ const styles = StyleSheet.create({
   closeBtn: {
     borderWidth: 1,
     borderRadius: radius.pill,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
     alignItems: 'center',
   },
   addDay: {
