@@ -82,6 +82,7 @@ export function CameraModal({
   const [recording, setRecording] = useState(false);
   const [reps, setReps] = useState(0);
   const [recSecs, setRecSecs] = useState(0);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const recTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Reset per open.
@@ -93,6 +94,7 @@ export function CameraModal({
       setRecording(false);
       setReps(0);
       setRecSecs(0);
+      setSaveError(null);
     }
     return () => {
       if (recTimer.current) {
@@ -134,7 +136,8 @@ export function CameraModal({
       });
       if (!pic?.uri) throw new Error('no uri');
       const dir = mediaDir();
-      const dest = `${dir.uri}photo-${Date.now()}.jpg`;
+      const sep = dir.uri.endsWith('/') ? '' : '/';
+      const dest = `${dir.uri}${sep}photo-${Date.now()}.jpg`;
       await copyAsync({ from: pic.uri, to: dest });
       await insertPhoto({
         date: todayKey(),
@@ -153,6 +156,7 @@ export function CameraModal({
   const startRecording = useCallback(async () => {
     if (recording || !cameraRef.current) return;
     setRecording(true);
+    setSaveError(null);
     setRecSecs(0);
     recTimer.current = setInterval(() => {
       setRecSecs((s) => {
@@ -174,36 +178,48 @@ export function CameraModal({
       }
       setRecording(false);
       if (!res?.uri) {
-        console.warn('[CameraModal] recordAsync returned no uri', res);
-      } else if (!exId) {
-        console.warn('[CameraModal] no exId, skipping clip save');
-      } else {
-        try {
-          const dir = mediaDir();
-          const dest = `${dir.uri}clip-${Date.now()}.mp4`;
-          await copyAsync({ from: res.uri, to: dest });
-          await insertClip({
-            exId,
-            exName: exName ?? '',
-            date: todayKey(),
-            ts: Date.now(),
-            reps,
-            mime: 'video/mp4',
-            uri: dest,
-          });
-          onClipSaved?.(reps);
-        } catch (saveErr) {
-          console.error('[CameraModal] failed to save clip', saveErr);
-        }
+        const msg = `Recording produced no video file (result: ${JSON.stringify(res)})`;
+        console.warn('[CameraModal]', msg);
+        setSaveError(msg);
+        return;
+      }
+      if (!exId) {
+        const msg = 'No exercise id: clip not saved';
+        console.warn('[CameraModal]', msg);
+        setSaveError(msg);
+        return;
+      }
+      try {
+        const dir = mediaDir();
+        const sep = dir.uri.endsWith('/') ? '' : '/';
+        const dest = `${dir.uri}${sep}clip-${Date.now()}.mp4`;
+        await copyAsync({ from: res.uri, to: dest });
+        await insertClip({
+          exId,
+          exName: exName ?? '',
+          date: todayKey(),
+          ts: Date.now(),
+          reps,
+          mime: 'video/mp4',
+          uri: dest,
+        });
+        onClipSaved?.(reps);
+      } catch (saveErr) {
+        const msg = `Save failed: ${saveErr instanceof Error ? saveErr.message : String(saveErr)}`;
+        console.error('[CameraModal]', msg, saveErr);
+        setSaveError(msg);
+        return;
       }
       onClose();
     } catch (err) {
-      console.error('[CameraModal] recording failed', err);
+      const msg = `Recording failed: ${err instanceof Error ? err.message : String(err)}`;
+      console.error('[CameraModal]', msg, err);
       if (recTimer.current) {
         clearInterval(recTimer.current);
         recTimer.current = null;
       }
       setRecording(false);
+      setSaveError(msg);
     }
   }, [recording, exId, exName, reps, onClipSaved, onClose]);
 
@@ -448,6 +464,16 @@ export function CameraModal({
               <Text style={styles.hint}>
                 Tap + for each rep. Stop recording to save the clip.
               </Text>
+              {saveError && (
+                <View style={styles.errorBox}>
+                  <Ionicons
+                    name="alert-circle-outline"
+                    size={18}
+                    color="#ff9f0a"
+                  />
+                  <Text style={styles.errorText}>{saveError}</Text>
+                </View>
+              )}
             </>
           )}
 
@@ -609,6 +635,24 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     textShadowColor: 'rgba(0,0,0,0.6)',
     textShadowRadius: 4,
+  },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(255,159,10,0.15)',
+    borderWidth: 1,
+    borderColor: '#ff9f0a',
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    maxWidth: '100%',
+  },
+  errorText: {
+    flex: 1,
+    color: '#ffb340',
+    fontSize: 13,
+    fontWeight: '600',
   },
   repRow: {
     flexDirection: 'row',
