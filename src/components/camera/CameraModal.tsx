@@ -70,6 +70,7 @@ export function CameraModal({
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
+  const [cameraReady, setCameraReady] = useState(false);
 
   const [facing, setFacing] = useState<'front' | 'back'>(
     mode === 'mirror' || mode === 'photo' ? 'front' : 'back'
@@ -95,6 +96,7 @@ export function CameraModal({
       setReps(0);
       setRecSecs(0);
       setSaveError(null);
+      setCameraReady(false);
     }
     return () => {
       if (recTimer.current) {
@@ -123,6 +125,7 @@ export function CameraModal({
   }, [visible, mode, pose]);
 
   const flip = useCallback(() => {
+    setCameraReady(false);
     setFacing((f) => (f === 'front' ? 'back' : 'front'));
   }, []);
 
@@ -154,7 +157,7 @@ export function CameraModal({
   }, [saving, pose, onClose]);
 
   const startRecording = useCallback(async () => {
-    if (recording || !cameraRef.current) return;
+    if (recording || !cameraReady || !cameraRef.current) return;
     setRecording(true);
     setSaveError(null);
     setRecSecs(0);
@@ -221,7 +224,7 @@ export function CameraModal({
       setRecording(false);
       setSaveError(msg);
     }
-  }, [recording, exId, exName, reps, onClipSaved, onClose]);
+  }, [recording, cameraReady, exId, exName, reps, onClipSaved, onClose]);
 
   const stopRecordingRef = useRef(() => {});
   stopRecordingRef.current = () => {
@@ -314,6 +317,8 @@ export function CameraModal({
           style={styles.camera}
           facing={facing}
           mirror={facing === 'front'}
+          mode={mode === 'recorder' ? 'video' : 'picture'}
+          onCameraReady={() => setCameraReady(true)}
           mute
         />
 
@@ -448,8 +453,13 @@ export function CameraModal({
                   />
                 </Pressable>
                 <Pressable
-                  style={[styles.recBtn, recording && styles.recBtnOn]}
+                  style={[
+                    styles.recBtn,
+                    recording && styles.recBtnOn,
+                    !recording && !cameraReady && styles.recBtnDisabled,
+                  ]}
                   onPress={recording ? stopRecording : startRecording}
+                  disabled={!recording && !cameraReady}
                   accessibilityLabel={recording ? 'Stop recording' : 'Record'}
                 >
                   <View
@@ -686,6 +696,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
   },
   recBtnOn: { backgroundColor: '#ff3b30' },
+  recBtnDisabled: { opacity: 0.4 },
   recDotBig: {
     width: 14,
     height: 14,
